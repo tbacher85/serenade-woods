@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Serenade Woods - Atmospheric Forest & Camping Simulator</title>
+    <title>Serenade Woods - Immersive Forest & Camping Simulator</title>
     <style>
         * {
             box-sizing: border-box;
@@ -28,7 +28,6 @@
             left: 0;
             z-index: 1;
         }
-        /* UI Overlay Layer */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -45,7 +44,6 @@
         .interactive {
             pointer-events: auto;
         }
-        /* Top Bar */
         .top-bar {
             display: flex;
             justify-content: space-between;
@@ -53,7 +51,7 @@
             width: 100%;
         }
         .panel {
-            background: rgba(15, 23, 42, 0.75);
+            background: rgba(15, 23, 42, 0.78);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 12px;
@@ -79,7 +77,6 @@
             font-weight: 600;
             color: #fff;
         }
-        /* Controls & Actions */
         .controls-panel {
             display: flex;
             gap: 10px;
@@ -103,10 +100,6 @@
             color: #38bdf8;
             transform: translateY(-1px);
         }
-        .btn:active {
-            transform: translateY(1px);
-        }
-        /* Center Crosshair / Prompt / Notification */
         .center-hud {
             position: absolute;
             top: 50%;
@@ -126,11 +119,10 @@
             border: 1px solid rgba(0, 0, 0, 0.5);
             border-radius: 50%;
             box-shadow: 0 0 4px rgba(0,0,0,0.5);
-            transition: transform 0.1s;
         }
         .interaction-prompt {
             margin-top: 15px;
-            background: rgba(15, 23, 42, 0.85);
+            background: rgba(15, 23, 42, 0.88);
             border: 1px solid #38bdf8;
             color: #38bdf8;
             padding: 8px 16px;
@@ -146,13 +138,12 @@
             opacity: 1;
             transform: translateY(0);
         }
-        /* Notification Banner */
         #notification-banner {
             position: absolute;
-            top: 25%;
+            top: 22%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(15, 23, 42, 0.92);
+            background: rgba(15, 23, 42, 0.94);
             border: 2px solid #38bdf8;
             color: #f8fafc;
             padding: 12px 24px;
@@ -165,14 +156,12 @@
             transition: opacity 0.3s ease, transform 0.3s ease;
             z-index: 60;
             text-align: center;
-            max-width: 500px;
+            max-width: 520px;
         }
         #notification-banner.show {
             opacity: 1;
-            transform: translate(-50%, -50%) scale(1.05);
+            transform: translate(-50%, -50%) scale(1.03);
         }
-
-        /* Bottom Area */
         .bottom-bar {
             display: flex;
             justify-content: space-between;
@@ -196,13 +185,13 @@
         .action-menu {
             display: flex;
             gap: 8px;
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(15, 23, 42, 0.82);
             padding: 10px;
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(10px);
             flex-wrap: wrap;
-            max-width: 650px;
+            max-width: 720px;
             justify-content: flex-end;
         }
         .action-btn {
@@ -224,10 +213,6 @@
             background: #334155;
             border-color: #38bdf8;
             color: #38bdf8;
-        }
-        .action-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
         }
         .action-btn span {
             font-size: 0.7rem;
@@ -290,7 +275,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(11, 16, 21, 0.92);
+            background: rgba(11, 16, 21, 0.94);
             backdrop-filter: blur(16px);
             z-index: 100;
             display: flex;
@@ -314,29 +299,29 @@
         .overlay-screen p {
             font-size: 1.05rem;
             color: #94a3b8;
-            max-width: 550px;
+            max-width: 580px;
             line-height: 1.6;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
         }
         .instructions-box {
             background: rgba(30, 41, 59, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 30px;
+            padding: 18px;
+            margin-bottom: 25px;
             text-align: left;
-            max-width: 500px;
+            max-width: 520px;
             width: 100%;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             color: #cbd5e1;
         }
         .instructions-box h3 {
             color: #38bdf8;
             margin-bottom: 8px;
-            font-size: 1rem;
+            font-size: 0.98rem;
         }
         .instructions-box ul {
-            padding-left: 20px;
+            padding-left: 18px;
             display: flex;
             flex-direction: column;
             gap: 4px;
@@ -358,7 +343,6 @@
             box-shadow: 0 15px 30px rgba(2, 132, 199, 0.6);
         }
 
-        /* Constellation Modal */
         .modal-screen {
             display: none;
             position: absolute;
@@ -366,7 +350,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(5, 8, 12, 0.85);
+            background: rgba(5, 8, 12, 0.88);
             backdrop-filter: blur(12px);
             z-index: 50;
             justify-content: center;
@@ -375,11 +359,11 @@
             padding: 20px;
         }
         .modal-card {
-            background: rgba(15, 23, 42, 0.92);
+            background: rgba(15, 23, 42, 0.94);
             border: 1px solid rgba(56, 189, 248, 0.4);
             border-radius: 16px;
             padding: 30px;
-            max-width: 480px;
+            max-width: 500px;
             width: 100%;
             text-align: center;
             box-shadow: 0 20px 50px rgba(0,0,0,0.6);
@@ -396,7 +380,6 @@
             margin-bottom: 25px;
         }
 
-        /* Photo Album Gallery Grid */
         .photo-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -434,25 +417,23 @@
 <body>
 
     <div id="canvas-container"></div>
-
-    <!-- Notification Banner -->
     <div id="notification-banner">Notification</div>
 
     <!-- Start Screen Overlay -->
     <div id="start-screen" class="overlay-screen">
         <h1>Serenade Woods</h1>
-        <p>Step into a serene forest solitude. Wander through pine groves, forage wild medicinal herbs and berries, pitch your tent, build a campfire, boil tea, snap photographs, and gaze at starry constellations.</p>
+        <p>Explore a lush pine forest solitude. Forage realistic 3D herbs & berries, craft wooden camp structures, light campfires that illuminate the dark night, toggle rain/fog weather, snap photographs, and gaze at brilliant star constellations.</p>
         <div class="instructions-box">
-            <h3>Controls & Gameplay</h3>
+            <h3>Controls & Features</h3>
             <ul>
                 <li><strong>Move:</strong> WASD / Arrow Keys or Virtual Joystick</li>
-                <li><strong>Look:</strong> Mouse Drag or Touch Swipe</li>
-                <li><strong>Run:</strong> Hold Shift</li>
-                <li><strong>Interact:</strong> Click on objects or press [E] near wood, herbs, stream, tent, or fire</li>
-                <li><strong>Camera:</strong> Press [C] or click Photo to snap a picture</li>
+                <li><strong>Look:</strong> Mouse Drag or Touch Swipe | <strong>Run:</strong> Hold Shift</li>
+                <li><strong>Interact / Harvest:</strong> Press [E] near wood, realistic herbs, stream, tent, or fire</li>
+                <li><strong>Crafting:</strong> Build Wooden Benches, Shelves, or Fences using collected wood</li>
+                <li><strong>Camera:</strong> Press [C] to snap a photo into your in-game Album</li>
             </ul>
         </div>
-        <button class="primary-btn interactive" id="start-btn">Enter Forest</button>
+        <button class="primary-btn interactive" id="start-btn">Enter Serenade Woods</button>
     </div>
 
     <!-- Constellation Modal -->
@@ -483,10 +464,10 @@
                 <div class="game-title">Serenade Woods</div>
                 <div class="stats-grid">
                     <div class="stat-item">Time: <span id="hud-time">12:00</span></div>
-                    <div class="stat-item">Weather: <span id="hud-weather">Clear</span></div>
+                    <div class="stat-item">Weather: <span id="hud-weather">Clear ☀️</span></div>
                     <div class="stat-item">Wood: <span id="hud-wood">0</span></div>
                     <div class="stat-item">Herbs/Berries: <span id="hud-items">0</span></div>
-                    <div class="stat-item">Tea: <span id="hud-tea">0</span></div>
+                    <div class="stat-item">Structures: <span id="hud-structures">0</span></div>
                     <div class="stat-item">Stamina: <span id="hud-stamina">100%</span></div>
                 </div>
             </div>
@@ -511,8 +492,9 @@
             <div class="action-menu">
                 <button class="action-btn interactive" id="action-tent">🏕️ <span id="lbl-tent">Pitch Tent</span></button>
                 <button class="action-btn interactive" id="action-fire">🔥 <span id="lbl-fire">Build Fire</span></button>
+                <button class="action-btn interactive" id="action-craft">🪵 <span>Craft Bench</span></button>
                 <button class="action-btn interactive" id="action-water">💧 <span id="lbl-water">Get Water</span></button>
-                <button class="action-btn interactive" id="action-tea">🍵 <span id="lbl-tea">Boil Tea</span></button>
+                <button class="action-btn interactive" id="action-tea">🍵 <span id="lbl-tea">Brew Tea</span></button>
                 <button class="action-btn interactive" id="action-food">🫐 <span id="lbl-food">Eat Berries</span></button>
                 <button class="action-btn interactive" id="action-camera">📷 <span>Photo [C]</span></button>
                 <button class="action-btn interactive" id="action-album">🖼️ <span>Album</span></button>
@@ -534,14 +516,14 @@
     <script>
         // --- Game State & Variables ---
         const state = {
-            timeOfDay: 13.0, // 0 to 24
-            timeSpeed: 0.04, // hours per second
+            timeOfDay: 13.0,
+            timeSpeed: 0.04,
             isNight: false,
-            weatherMode: 0, // 0: Clear, 1: Rain, 2: Fog
+            weatherMode: 0, // 0: Clear ☀️, 1: Rain 🌧️, 2: Fog 🌫️
             woodCount: 0,
-            hasWater: false, // false or 'stream'
-            teaCount: 0,
-            foragedItems: [], // Array of collected herb/berry objects with lore
+            hasWater: false,
+            foragedItems: [],
+            structures: [],
             stamina: 100,
             isRunning: false,
             muted: false,
@@ -569,6 +551,7 @@
         let interactables = [];
         let starsGroup, constellationsGroup;
         let campfireMesh = null;
+        let campfireLight = null;
         let tentMesh = null;
         let rainSystem = null;
 
@@ -614,7 +597,6 @@
             const gain = audioCtx.createGain();
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-
             const now = audioCtx.currentTime;
 
             if (type === 'wood') {
@@ -755,7 +737,7 @@
             const px = posAttr.getX(i);
             const py = posAttr.getY(i);
             let z = Math.sin(px * 0.03) * Math.cos(py * 0.03) * 1.5;
-            if (Math.abs(px) < 6.5) z = -0.5; // Stream valley flat bed
+            if (Math.abs(px) < 6.5) z = -0.5;
             posAttr.setZ(i, z);
         }
         groundGeo.computeVertexNormals();
@@ -770,7 +752,6 @@
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // Stream River
         const streamGeo = new THREE.PlaneGeometry(10, 300);
         const streamMat = new THREE.MeshStandardMaterial({
             color: 0x38bdf8,
@@ -784,7 +765,6 @@
         stream.position.set(0, -0.2, 0);
         scene.add(stream);
 
-        // Wooden Bridge
         const bridgeGroup = new THREE.Group();
         const plankMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.8 });
         for (let i = -6; i <= 6; i++) {
@@ -797,7 +777,7 @@
         bridgeGroup.position.set(0, 0, 5);
         scene.add(bridgeGroup);
 
-        // --- Trees (Carefully excluding the stream channel |x| < 7) ---
+        // --- Trees ---
         const treeMat = new THREE.MeshStandardMaterial({ color: 0x2d4a22, roughness: 0.8 });
         const trunkMat = new THREE.MeshStandardMaterial({ map: barkTex, roughness: 0.9 });
 
@@ -835,7 +815,7 @@
             }
         }
 
-        // --- Collectibles: Wood Logs & Forageable Herbs/Berries ---
+        // --- Wood Logs ---
         const logGeo = new THREE.CylinderGeometry(0.2, 0.2, 2, 5);
         const logMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
 
@@ -855,21 +835,69 @@
             if (Math.abs(x) > 7.5) spawnWoodLog(x, z);
         }
 
-        // Forageable herbs and berries definitions
-        const herbTypes = [
-            { name: "Wild Mint Leaves", desc: "Aromatic mint leaves harvested from damp forest moss. Perfect for brewing soothing herbal tea.", type: 'herb', color: 0x10b981 },
-            { name: "Healing Chamomile", desc: "Delicate white and yellow flowers with gentle restorative properties that soothe fatigue.", type: 'herb', color: 0xfacc15 },
-            { name: "Forest Blueberries", desc: "Plump wild berries rich in natural sugars. Instantly restores stamina and energy.", type: 'berry', color: 0x6366f1 }
+        // --- Realistic 3D Herbs & Berries Generation ---
+        const herbTemplates = [
+            {
+                name: "Wild Mint Herb",
+                desc: "Aromatic mint leaves harvested from damp forest moss. Brews into invigorating tea.",
+                type: 'herb',
+                createMesh: () => {
+                    const group = new THREE.Group();
+                    const stemMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.8 });
+                    for (let i = 0; i < 5; i++) {
+                        const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.4, 4), stemMat);
+                        leaf.position.set((Math.random() - 0.5) * 0.3, 0.2, (Math.random() - 0.5) * 0.3);
+                        leaf.rotation.z = (Math.random() - 0.5) * 0.8;
+                        group.add(leaf);
+                    }
+                    return group;
+                }
+            },
+            {
+                name: "Healing Chamomile",
+                desc: "Delicate white petals with yellow center. Soothes fatigue and restores calm.",
+                type: 'herb',
+                createMesh: () => {
+                    const group = new THREE.Group();
+                    const centerMat = new THREE.MeshStandardMaterial({ color: 0xeab308 });
+                    const petalMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc });
+                    const center = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), centerMat);
+                    center.position.y = 0.25;
+                    group.add(center);
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (i / 6) * Math.PI * 2;
+                        const petal = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.05, 0.05), petalMat);
+                        petal.position.set(Math.cos(angle) * 0.15, 0.25, Math.sin(angle) * 0.15);
+                        group.add(petal);
+                    }
+                    return group;
+                }
+            },
+            {
+                name: "Forest Blueberries",
+                desc: "Plump wild berries rich in natural sugars. Instantly restores stamina.",
+                type: 'berry',
+                createMesh: () => {
+                    const group = new THREE.Group();
+                    const bushMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.9 });
+                    const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(0.3), bushMat);
+                    bush.position.y = 0.2;
+                    group.add(bush);
+                    const berryMat = new THREE.MeshStandardMaterial({ color: 0x4f46e5 });
+                    for (let i = 0; i < 4; i++) {
+                        const berry = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), berryMat);
+                        berry.position.set((Math.random() - 0.5) * 0.3, 0.35 + Math.random() * 0.1, (Math.random() - 0.5) * 0.3);
+                        group.add(berry);
+                    }
+                    return group;
+                }
+            }
         ];
 
-        const herbGeo = new THREE.SphereGeometry(0.3, 8, 8);
-
         function spawnForageable(x, z) {
-            const template = herbTypes[Math.floor(Math.random() * herbTypes.length)];
-            const mat = new THREE.MeshStandardMaterial({ color: template.color, roughness: 0.5 });
-            const mesh = new THREE.Mesh(herbGeo, mat);
-            mesh.position.set(x, 0.2, z);
-            mesh.castShadow = true;
+            const template = herbTemplates[Math.floor(Math.random() * herbTemplates.length)];
+            const mesh = template.createMesh();
+            mesh.position.set(x, 0, z);
             scene.add(mesh);
             interactables.push({
                 type: 'forage',
@@ -877,11 +905,11 @@
                 x: x,
                 z: z,
                 active: true,
-                itemData: { ...template }
+                itemData: { name: template.name, desc: template.desc, type: template.type }
             });
         }
 
-        for (let i = 0; i < 25; i++) {
+        for (let i = 0; i < 28; i++) {
             const x = (Math.random() - 0.5) * 130;
             const z = (Math.random() - 0.5) * 130;
             if (Math.abs(x) > 7.5) spawnForageable(x, z);
@@ -889,7 +917,7 @@
 
         // --- Starry Sky & Constellations ---
         const starsGeo = new THREE.BufferGeometry();
-        const starCount = 1500;
+        const starCount = 1800;
         const starPos = [];
         for (let i = 0; i < starCount; i++) {
             const u = Math.random();
@@ -923,15 +951,15 @@
         scene.add(constellationsGroup);
         constellationsGroup.visible = false;
 
-        // --- Weather Rain Particles ---
+        // --- Weather Rain & Fog ---
         const rainGeo = new THREE.BufferGeometry();
-        const rainCount = 1800;
+        const rainCount = 2000;
         const rainPos = [];
         for (let i = 0; i < rainCount; i++) {
             rainPos.push((Math.random() - 0.5) * 120, Math.random() * 60, (Math.random() - 0.5) * 120);
         }
         rainGeo.setAttribute('position', new THREE.Float32BufferAttribute(rainPos, 3));
-        const rainMat = new THREE.PointsMaterial({ color: 0xaaaaee, size: 0.6, transparent: true, opacity: 0 });
+        const rainMat = new THREE.PointsMaterial({ color: 0xa5b4fc, size: 0.7, transparent: true, opacity: 0 });
         rainSystem = new THREE.Points(rainGeo, rainMat);
         rainSystem.visible = false;
         scene.add(rainSystem);
@@ -1035,10 +1063,10 @@
             }
         });
 
-        // --- Interaction & Survival System ---
+        // --- Interaction & Crafting System ---
         function handleInteraction() {
             playSound('ui');
-            if (state.isNight) {
+            if (state.isNight && state.weatherMode === 0) {
                 const raycaster = new THREE.Raycaster();
                 raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
                 const intersects = raycaster.intersectObjects(constellationsGroup.children);
@@ -1090,15 +1118,16 @@
             }
 
             // Campfire
-            if (fireMesh && Math.hypot(player.x - fireMesh.position.x, player.z - fireMesh.position.z) < 3.0) {
+            if (campfireMesh && Math.hypot(player.x - campfireMesh.position.x, player.z - campfireMesh.position.z) < 3.0) {
                 if (!state.fireLit && state.woodCount > 0) {
                     state.woodCount--;
                     state.fireLit = true;
                     state.fireFuel = 100;
-                    fireMesh.getObjectByName('flame').visible = true;
+                    campfireMesh.getObjectByName('flame').visible = true;
+                    if (campfireLight) campfireLight.intensity = 2.5;
                     playSound('fire');
                     updateHUD();
-                    showNotification("Lit the campfire!");
+                    showNotification("Lit the campfire! It now illuminates the surrounding area.");
                     return;
                 } else if (state.fireLit && state.woodCount > 0) {
                     state.woodCount--;
@@ -1114,7 +1143,7 @@
         function toggleTentSleep() {
             state.inTent = !state.inTent;
             if (state.inTent) {
-                state.timeOfDay = 7.0; // Wake up at sunrise
+                state.timeOfDay = 7.0;
                 state.stamina = 100;
                 updateTimeLighting();
                 showNotification("Sleeping in tent... Woke up refreshed at sunrise with 100% stamina.");
@@ -1132,7 +1161,7 @@
             showNotification("📷 Photo captured and saved to Album!");
         }
 
-        // --- Action Buttons ---
+        // --- Action & Crafting Buttons ---
         document.getElementById('action-tent').addEventListener('click', () => {
             playSound('ui');
             if (!state.tentBuilt) {
@@ -1177,6 +1206,12 @@
                 flame.visible = false;
                 fireGroup.add(flame);
 
+                // Add point light for campfire illumination
+                const cLight = new THREE.PointLight(0xff7722, 0, 15);
+                cLight.position.set(0, 1, 0);
+                fireGroup.add(cLight);
+                campfireLight = cLight;
+
                 const fx = player.x + Math.sin(player.rotY) * 3;
                 const fz = player.z + Math.cos(player.rotY) * 3;
                 fireGroup.position.set(fx, 0, fz);
@@ -1190,16 +1225,48 @@
                 state.fireLit = true;
                 state.fireFuel = 100;
                 if (campfireMesh) campfireMesh.getObjectByName('flame').visible = true;
+                if (campfireLight) campfireLight.intensity = 2.5;
                 playSound('fire');
                 document.getElementById('lbl-fire').innerText = "Extinguish Fire";
-                showNotification("Lit campfire!");
+                showNotification("Lit campfire! Illuminating surrounding area.");
             } else if (state.fireBuilt && state.fireLit) {
                 state.fireLit = false;
                 if (campfireMesh) campfireMesh.getObjectByName('flame').visible = false;
+                if (campfireLight) campfireLight.intensity = 0;
                 document.getElementById('lbl-fire').innerText = "Light Fire";
                 showNotification("Extinguished campfire.");
             }
             updateHUD();
+        });
+
+        document.getElementById('action-craft').addEventListener('click', () => {
+            playSound('ui');
+            if (state.woodCount >= 2) {
+                state.woodCount -= 2;
+                const benchGroup = new THREE.Group();
+                const woodMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.8 });
+                const seat = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 0.8), woodMat);
+                seat.position.y = 0.8;
+                seat.castShadow = true;
+                benchGroup.add(seat);
+
+                const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.6), woodMat);
+                leg1.position.set(-0.8, 0.4, 0);
+                benchGroup.add(leg1);
+                const leg2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.6), woodMat);
+                leg2.position.set(0.8, 0.4, 0);
+                benchGroup.add(leg2);
+
+                const cx = player.x + Math.sin(player.rotY) * 3;
+                const cz = player.z + Math.cos(player.rotY) * 3;
+                benchGroup.position.set(cx, 0, cz);
+                scene.add(benchGroup);
+                state.structures.push(benchGroup);
+                showNotification("🪵 Crafted and placed a wooden rest bench (cost: 2 wood).");
+                updateHUD();
+            } else {
+                showNotification("You need at least 2 wood logs to craft a wooden bench!");
+            }
         });
 
         document.getElementById('action-water').addEventListener('click', () => {
@@ -1219,15 +1286,14 @@
             if (state.hasWater === 'stream' && state.fireLit && hasMint !== -1) {
                 state.hasWater = false;
                 state.foragedItems.splice(hasMint, 1);
-                state.teaCount++;
                 state.stamina = Math.min(100, state.stamina + 35);
                 playSound('drink');
                 updateHUD();
-                showNotification("🍵 Brewed and drank hot herbal mint tea! Stamina restored.");
+                showNotification("🍵 Brewed and drank hot herbal tea! Stamina restored.");
             } else if (!state.fireLit) {
                 showNotification("You need a lit campfire to boil tea!");
             } else if (hasMint === -1) {
-                showNotification("You need to forage wild mint herbs to brew tea!");
+                showNotification("You need to forage wild herbs to brew tea!");
             } else {
                 showNotification("You need fresh stream water first.");
             }
@@ -1241,7 +1307,7 @@
                 state.stamina = Math.min(100, state.stamina + 25);
                 playSound('drink');
                 updateHUD();
-                showNotification(`🫐 Ate ${item.name}! Delicious and revitalizing. Stamina restored.`);
+                showNotification(`🫐 Ate ${item.name}! Revitalizing. Stamina restored.`);
             } else {
                 showNotification("No wild berries in inventory. Forage for berries around the forest!");
             }
@@ -1272,7 +1338,7 @@
             document.getElementById('album-modal').style.display = 'none';
         });
 
-        // Top bar controls
+        // Top bar buttons
         document.getElementById('btn-toggle-time').addEventListener('click', () => {
             state.timeOfDay = state.timeOfDay >= 18 ? 8 : 20;
             updateTimeLighting();
@@ -1315,17 +1381,6 @@
             document.getElementById('touch-run-btn').style.background = state.isRunning ? '#38bdf8' : 'rgba(15, 23, 42, 0.85)';
         });
 
-        let promptTimeout = null;
-        function showPrompt(text) {
-            const el = document.getElementById('interaction-prompt');
-            el.innerText = text;
-            el.classList.add('visible');
-            clearTimeout(promptTimeout);
-            promptTimeout = setTimeout(() => {
-                el.classList.remove('visible');
-            }, 3000);
-        }
-
         let notifTimeout = null;
         function showNotification(text) {
             const banner = document.getElementById('notification-banner');
@@ -1341,11 +1396,12 @@
             const hours = Math.floor(state.timeOfDay);
             const mins = Math.floor((state.timeOfDay - hours) * 60);
             document.getElementById('hud-time').innerText = `${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
-            const weatherNames = ['Clear', 'Rain', 'Fog'];
-            document.getElementById('hud-weather').innerText = weatherNames[state.weatherMode];
+            const weatherLabels = ['Clear ☀️', 'Rain 🌧️', 'Fog 🌫️'];
+            document.getElementById('hud-weather').innerText = weatherLabels[state.weatherMode];
+            document.getElementById('btn-toggle-weather').innerText = `Weather: ${['Clear', 'Rain', 'Fog'][state.weatherMode]}`;
             document.getElementById('hud-wood').innerText = state.woodCount;
             document.getElementById('hud-items').innerText = state.foragedItems.length;
-            document.getElementById('hud-tea').innerText = state.teaCount;
+            document.getElementById('hud-structures').innerText = state.structures.length;
             document.getElementById('hud-stamina').innerText = `${Math.floor(state.stamina)}%`;
         }
 
@@ -1358,10 +1414,10 @@
             let fogColor = 0xcbe6ff;
 
             if (state.isNight) {
-                sunIntensity = 0.05;
-                bgColor = 0x05080c;
-                fogColor = 0x070b12;
-                starsGroup.material.opacity = (state.weatherMode === 0) ? 0.95 : 0.2; // Stars visible in clear night
+                sunIntensity = 0.02;
+                bgColor = 0x03060a;
+                fogColor = 0x05080e;
+                starsGroup.material.opacity = (state.weatherMode === 0) ? 0.95 : 0.15;
                 constellationsGroup.visible = (state.weatherMode === 0);
             } else if (state.timeOfDay < 8 || state.timeOfDay > 17) {
                 sunIntensity = 0.5;
@@ -1398,9 +1454,10 @@
                 scene.fog.density = 0.012;
             }
             updateTimeLighting();
+            updateHUD();
         }
 
-        // --- Minimap Radar ---
+        // --- Minimap ---
         const minimapCanvas = document.getElementById('minimap-canvas');
         const minimapCtx = minimapCanvas.getContext('2d');
 
@@ -1413,17 +1470,14 @@
             const cx = 65;
             const cy = 65;
 
-            // Stream river
             minimapCtx.fillStyle = '#38bdf8';
             minimapCtx.fillRect(cx - (7 * scale), 0, 10 * scale, 130);
 
-            // Player dot
             minimapCtx.fillStyle = '#f43f5e';
             minimapCtx.beginPath();
             minimapCtx.arc(cx, cy, 4, 0, Math.PI * 2);
             minimapCtx.fill();
 
-            // Campfire dot
             if (state.fireBuilt && campfireMesh) {
                 const dx = (campfireMesh.position.x - player.x) * scale + cx;
                 const dz = (campfireMesh.position.z - player.z) * scale + cy;
@@ -1434,7 +1488,7 @@
             }
         }
 
-        // --- Main Game Loop ---
+        // --- Main Loop ---
         let clock = new THREE.Clock();
 
         function animate() {
