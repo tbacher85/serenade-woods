@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Serenade Woods - Atmospheric Forest & Camping Simulator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b1015;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #f0f4f8;
+        }
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        /* UI Overlay Layer */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .interactive {
+            pointer-events: auto;
+        }
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+        }
+        .panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 12px 18px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        .game-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: #38bdf8;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, auto);
+            gap: 6px 16px;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+        .stat-item span {
+            font-weight: 600;
+            color: #fff;
+        }
+        /* Controls & Actions */
+        .controls-panel {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .btn {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #f8fafc;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .btn:hover {
+            background: rgba(51, 65, 85, 0.95);
+            border-color: rgba(56, 189, 248, 0.5);
+            color: #38bdf8;
+            transform: translateY(-1px);
+        }
+        .btn:active {
+            transform: translateY(1px);
+        }
+        /* Center Crosshair / Prompt */
+        .center-hud {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            pointer-events: none;
+        }
+        .crosshair {
+            width: 8px;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+        .crosshair.active {
+            transform: scale(1.6);
+            background-color: #38bdf8;
+        }
+        .interaction-prompt {
+            margin-top: 15px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid #38bdf8;
+            color: #38bdf8;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(56, 189, 248, 0.3);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .interaction-prompt.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        /* Bottom Area */
+        .bottom-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+        }
+        /* Radar Minimap */
+        .minimap-container {
+            width: 130px;
+            height: 130px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+        #minimap-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        /* Crafting / Action Menu */
+        .action-menu {
+            display: flex;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+        }
+        .action-btn {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            transition: all 0.2s;
+        }
+        .action-btn:hover:not(:disabled) {
+            background: #334155;
+            border-color: #38bdf8;
+            color: #38bdf8;
+        }
+        .action-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .action-btn span {
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: none;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .touch-pad {
+            width: 130px;
+            height: 130px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            position: relative;
+            pointer-events: auto;
+            touch-action: none;
+        }
+        .touch-thumb {
+            width: 50px;
+            height: 50px;
+            background: rgba(56, 189, 248, 0.6);
+            border-radius: 50%;
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            pointer-events: none;
+            transition: transform 0.05s;
+        }
+        .touch-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        .touch-btn {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        /* Start / Constellation / Sleep Overlays */
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 16, 21, 0.92);
+            backdrop-filter: blur(16px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            text-align: center;
+            transition: opacity 0.5s ease;
+        }
+        .overlay-screen h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #f8fafc;
+            margin-bottom: 10px;
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .overlay-screen p {
+            font-size: 1.05rem;
+            color: #94a3b8;
+            max-width: 550px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .instructions-box {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+            max-width: 500px;
+            width: 100%;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+        .instructions-box h3 {
+            color: #38bdf8;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        .instructions-box ul {
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .primary-btn {
+            background: linear-gradient(135deg, #0284c7, #4f46e5);
+            color: #fff;
+            border: none;
+            padding: 14px 36px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(2, 132, 199, 0.4);
+            transition: all 0.2s ease;
+        }
+        .primary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(2, 132, 199, 0.6);
+        }
+
+        /* Constellation Modal */
+        #constellation-modal {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 8, 12, 0.85);
+            backdrop-filter: blur(12px);
+            z-index: 50;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+        .constellation-card {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+        .constellation-card h2 {
+            color: #38bdf8;
+            margin-bottom: 12px;
+            font-size: 1.5rem;
+        }
+        .constellation-card p {
+            color: #cbd5e1;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 768px) {
+            #mobile-controls {
+                display: flex;
+            }
+            .controls-panel {
+                display: none;
+            }
+        }
+    </style>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- Start Screen Overlay -->
+    <div id="start-screen" class="overlay-screen">
+        <h1>Serenade Woods</h1>
+        <p>Step into a serene forest solitude. Wander through pine groves, gather firewood, pitch your tent, build a crackling campfire, boil hot tea, cook food, and gaze at starry night constellations.</p>
+        <div class="instructions-box">
+            <h3>Controls & Gameplay</h3>
+            <ul>
+                <li><strong>Move:</strong> WASD / Arrow Keys or Virtual Joystick</li>
+                <li><strong>Look:</strong> Mouse Drag or Touch Swipe</li>
+                <li><strong>Run:</strong> Hold Shift</li>
+                <li><strong>Interact:</strong> Click on objects or press [E] near wood, stream, tent, or fire</li>
+                <li><strong>Stargaze:</strong> Click on glowing constellations at night</li>
+            </ul>
+        </div>
+        <button class="primary-btn interactive" id="start-btn">Enter Forest</button>
+    </div>
+
+    <!-- Constellation Modal -->
+    <div id="constellation-modal" class="interactive">
+        <div class="constellation-card">
+            <h2 id="constellation-title">Orion the Hunter</h2>
+            <p id="constellation-desc">A prominent constellation located on the celestial equator, visible throughout the world. Dominated by bright stars Rigel and Betelgeuse, ancient symbol of the celestial hunter.</p>
+            <button class="primary-btn" id="close-constellation-btn">Return to Stargazing</button>
+        </div>
+    </div>
+
+    <!-- Main UI Layer -->
+    <div id="ui-layer">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="panel">
+                <div class="game-title">Serenade Woods</div>
+                <div class="stats-grid">
+                    <div class="stat-item">Time: <span id="hud-time">12:00</span></div>
+                    <div class="stat-item">Weather: <span id="hud-weather">Clear</span></div>
+                    <div class="stat-item">Wood: <span id="hud-wood">0</span></div>
+                    <div class="stat-item">Water: <span id="hud-water">Empty</span></div>
+                    <div class="stat-item">Tea: <span id="hud-tea">0</span></div>
+                    <div class="stat-item">Food: <span id="hud-food">1</span></div>
+                    <div class="stat-item">Stamina: <span id="hud-stamina">100%</span></div>
+                </div>
+            </div>
+            <div class="controls-panel">
+                <button class="btn interactive" id="btn-toggle-time">Time: Day</button>
+                <button class="btn interactive" id="btn-toggle-weather">Weather: Clear</button>
+                <button class="btn interactive" id="btn-mute">Audio: ON</button>
+            </div>
+        </div>
+
+        <!-- Center Crosshair & Prompt -->
+        <div class="center-hud">
+            <div class="crosshair" id="crosshair"></div>
+            <div class="interaction-prompt" id="interaction-prompt">Press [E] to Gather Wood</div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="bottom-bar">
+            <div class="minimap-container panel" style="padding:0;">
+                <canvas id="minimap-canvas" width="130" height="130"></canvas>
+            </div>
+            <div class="action-menu">
+                <button class="action-btn interactive" id="action-tent">🏕️ <span id="lbl-tent">Pitch Tent</span></button>
+                <button class="action-btn interactive" id="action-fire">🔥 <span id="lbl-fire">Build Fire</span></button>
+                <button class="action-btn interactive" id="action-water">💧 <span id="lbl-water">Get Water</span></button>
+                <button class="action-btn interactive" id="action-tea">🍵 <span id="lbl-tea">Boil Tea</span></button>
+                <button class="action-btn interactive" id="action-food">🍖 <span id="lbl-food">Cook Food</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Virtual Controls -->
+    <div id="mobile-controls">
+        <div class="touch-pad" id="touch-joystick">
+            <div class="touch-thumb" id="touch-thumb"></div>
+        </div>
+        <div class="touch-buttons">
+            <button class="touch-btn interactive" id="touch-action-btn">Action</button>
+            <button class="touch-btn interactive" id="touch-run-btn">Run</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game State & Variables ---
+        const state = {
+            timeOfDay: 13.0, // 0 to 24
+            timeSpeed: 0.05, // hours per second
+            isNight: false,
+            weatherMode: 0, // 0: Clear, 1: Rain, 2: Fog
+            woodCount: 0,
+            hasWater: false, // false, 'stream', 'fresh'
+            teaCount: 0,
+            foodCount: 1, // Raw provisions
+            cookedFoodCount: 0,
+            stamina: 100,
+            isRunning: false,
+            muted: false,
+            gameStarted: false,
+            tentBuilt: false,
+            inTent: false,
+            fireBuilt: false,
+            fireLit: false,
+            fireFuel: 0
+        };
+
+        // Player position & movement
+        const player = {
+            x: 0,
+            z: 25,
+            y: 0,
+            rotY: 0,
+            pitch: 0,
+            speed: 4.5,
+            runMultiplier: 1.8,
+            radius: 0.8
+        };
+
+        // World Objects & Entities
+        let trees = [];
+        let rocks = [];
+        let ferns = [];
+        let interactables = [];
+        let particles = [];
+        let starsGroup, constellationsGroup;
+        let campfireMesh = null;
+        let tentMesh = null;
+
+        // Audio System via Web Audio API
+        let audioCtx = null;
+        let ambientGain = null;
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            ambientGain = audioCtx.createGain();
+            ambientGain.gain.value = 0.15;
+            ambientGain.connect(audioCtx.destination);
+
+            const bufferSize = audioCtx.sampleRate * 2;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            const whiteNoise = audioCtx.createBufferSource();
+            whiteNoise.buffer = noiseBuffer;
+            whiteNoise.loop = true;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 250;
+            filter.Q.value = 1.2;
+
+            whiteNoise.connect(filter);
+            filter.connect(ambientGain);
+            whiteNoise.start();
+        }
+
+        function playSound(type) {
+            if (state.muted || !audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'wood') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'fire') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'drink') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.4);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'eat') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(150, now + 0.25);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } else if (type === 'ui') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.setValueAtTime(800, now + 0.05);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            }
+        }
+
+        // --- Three.js Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xcbe6ff);
+        scene.fog = new THREE.FogExp2(0xcbe6ff, 0.012);
+
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.7, 25);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        container.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
+        sunLight.position.set(50, 80, 50);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 200;
+        const d = 60;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.bias = -0.0005;
+        scene.add(sunLight);
+
+        // --- Canvas Texture Generators ---
+        function createBarkTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#4a3525';
+            ctx.fillRect(0, 0, 256, 256);
+            ctx.fillStyle = '#2c1e12';
+            for (let i = 0; i < 60; i++) {
+                const x = Math.random() * 256;
+                const y = Math.random() * 256;
+                const w = 4 + Math.random() * 8;
+                const h = 20 + Math.random() * 50;
+                ctx.fillRect(x, y, w, h);
+            }
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            return texture;
+        }
+
+        function createGroundTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#3a5a40';
+            ctx.fillRect(0, 0, 512, 512);
+            for (let i = 0; i < 1000; i++) {
+                ctx.fillStyle = Math.random() > 0.5 ? '#283618' : '#588157';
+                ctx.fillRect(Math.random() * 512, Math.random() * 512, 4 + Math.random() * 8, 4 + Math.random() * 8);
+            }
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(40, 40);
+            return texture;
+        }
+
+        const barkTex = createBarkTexture();
+        const groundTex = createGroundTexture();
+
+        // --- Procedural Terrain & Environment ---
+        const groundGeo = new THREE.PlaneGeometry(300, 300, 64, 64);
+        const posAttr = groundGeo.attributes.position;
+        for (let i = 0; i < posAttr.count; i++) {
+            const px = posAttr.getX(i);
+            const py = posAttr.getY(i);
+            let z = Math.sin(px * 0.03) * Math.cos(py * 0.03) * 1.5;
+            if (Math.abs(px) < 6) z = -0.5; // Stream valley
+            posAttr.setZ(i, z);
+        }
+        groundGeo.computeVertexNormals();
+
+        const groundMat = new THREE.MeshStandardMaterial({
+            map: groundTex,
+            roughness: 0.9,
+            metalness: 0.1
+        });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Stream (River)
+        const streamGeo = new THREE.PlaneGeometry(8, 300);
+        const streamMat = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8,
+            roughness: 0.1,
+            metalness: 0.8,
+            transparent: true,
+            opacity: 0.85
+        });
+        const stream = new THREE.Mesh(streamGeo, streamMat);
+        stream.rotation.x = -Math.PI / 2;
+        stream.position.set(0, -0.2, 0);
+        scene.add(stream);
+
+        // Wooden Bridge
+        const bridgeGroup = new THREE.Group();
+        const plankMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.8 });
+        for (let i = -6; i <= 6; i++) {
+            const plank = new THREE.Mesh(new THREE.BoxGeometry(9, 0.2, 0.8), plankMat);
+            plank.position.set(0, 0.1, i * 1.0);
+            plank.castShadow = true;
+            plank.receiveShadow = true;
+            bridgeGroup.add(plank);
+        }
+        bridgeGroup.position.set(0, 0, 5);
+        scene.add(bridgeGroup);
+
+        // --- Procedural Trees ---
+        const treeMat = new THREE.MeshStandardMaterial({ color: 0x2d4a22, roughness: 0.8 });
+        const trunkMat = new THREE.MeshStandardMaterial({ map: barkTex, roughness: 0.9 });
+
+        function createPineTree(x, z) {
+            const group = new THREE.Group();
+            const height = 8 + Math.random() * 6;
+            
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.7, height, 6), trunkMat);
+            trunk.position.y = height / 2;
+            trunk.castShadow = true;
+            trunk.receiveShadow = true;
+            group.add(trunk);
+
+            const tiers = 4;
+            for (let i = 0; i < tiers; i++) {
+                const tierY = (height * 0.4) + (i * height * 0.18);
+                const radius = (3.5 - (i * 0.7)) * (0.8 + Math.random() * 0.4);
+                const cone = new THREE.Mesh(new THREE.ConeGeometry(radius, height * 0.35, 7), treeMat);
+                cone.position.y = tierY;
+                cone.castShadow = true;
+                cone.receiveShadow = true;
+                group.add(cone);
+            }
+
+            group.position.set(x, 0, z);
+            scene.add(group);
+            trees.push({ x, z, radius: 1.2 });
+        }
+
+        for (let i = 0; i < 140; i++) {
+            const x = (Math.random() - 0.5) * 260;
+            const z = (Math.random() - 0.5) * 260;
+            if (Math.abs(x) > 5 || Math.abs(z - 5) > 10) {
+                createPineTree(x, z);
+            }
+        }
+
+        // Collectible Wood Logs
+        const logGeo = new THREE.CylinderGeometry(0.2, 0.2, 2, 5);
+        const logMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
+
+        function spawnWoodLog(x, z) {
+            const log = new THREE.Mesh(logGeo, logMat);
+            log.rotation.z = Math.PI / 2;
+            log.rotation.y = Math.random() * Math.PI;
+            log.position.set(x, 0.2, z);
+            log.castShadow = true;
+            scene.add(log);
+            interactables.push({ type: 'wood', mesh: log, x, z, active: true });
+        }
+
+        for (let i = 0; i < 25; i++) {
+            const x = (Math.random() - 0.5) * 120;
+            const z = (Math.random() - 0.5) * 120;
+            if (Math.abs(x) > 6) spawnWoodLog(x, z);
+        }
+
+        // --- Starry Sky & Constellations ---
+        const starsGeo = new THREE.BufferGeometry();
+        const starCount = 1200;
+        const starPos = [];
+        for (let i = 0; i < starCount; i++) {
+            const u = Math.random();
+            const v = Math.random();
+            const theta = u * 2.0 * Math.PI;
+            const phi = Math.acos(2.0 * v - 1.0);
+            const r = 400;
+            starPos.push(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
+        }
+        starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2.5, transparent: true, opacity: 0 });
+        starsGroup = new THREE.Points(starsGeo, starsMat);
+        scene.add(starsGroup);
+
+        const constellationsData = [
+            { name: "Orion the Hunter", pos: new THREE.Vector3(120, 250, -300), desc: "Dominant winter constellation featuring Rigel and Betelgeuse, legendary celestial hunter." },
+            { name: "Ursa Major", pos: new THREE.Vector3(-180, 280, 200), desc: "The Great Bear containing the Big Dipper asterism, pointing steadfastly to Polaris." },
+            { name: "Cassiopeia", pos: new THREE.Vector3(200, 300, 150), desc: "Distinctive 'W' shaped northern constellation representing the vain mythological queen." }
+        ];
+
+        constellationsGroup = new THREE.Group();
+        const constellationNodeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+        const constellations = [];
+
+        constellationsData.forEach(data => {
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(6, 16, 16), constellationNodeMat);
+            mesh.position.copy(data.pos);
+            constellationsGroup.add(mesh);
+            constellations.push({ mesh, name: data.name, desc: data.desc });
+        });
+        scene.add(constellationsGroup);
+        constellationsGroup.visible = false;
+
+        // Weather System Particles
+        const rainGeo = new THREE.BufferGeometry();
+        const rainCount = 1500;
+        const rainPos = [];
+        for (let i = 0; i < rainCount; i++) {
+            rainPos.push((Math.random() - 0.5) * 100, Math.random() * 50, (Math.random() - 0.5) * 100);
+        }
+        rainGeo.setAttribute('position', new THREE.Float32BufferAttribute(rainPos, 3));
+        const rainMat = new THREE.PointsMaterial({ color: 0xaaaaee, size: 0.6, transparent: true, opacity: 0 });
+        const rainSystem = new THREE.Points(rainGeo, rainMat);
+        scene.add(rainSystem);
+
+        // --- Input Handling ---
+        const keys = { w: false, a: false, s: false, d: false, shift: false, e: false };
+        let isPointerLocked = false;
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = true;
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = true;
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = true;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { keys.shift = true; state.isRunning = true; }
+            if (e.code === 'KeyE') handleInteraction();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = false;
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = false;
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = false;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = false;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { keys.shift = false; state.isRunning = false; }
+        });
+
+        renderer.domElement.addEventListener('click', () => {
+            if (!state.gameStarted || state.inTent) return;
+            renderer.domElement.requestPointerLock();
+        });
+
+        document.addEventListener('pointerlockchange', () => {
+            isPointerLocked = document.pointerLockElement === renderer.domElement;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isPointerLocked || !state.gameStarted || state.inTent) return;
+            const sensitivity = 0.002;
+            player.rotY -= e.movementX * sensitivity;
+            player.pitch -= e.movementY * sensitivity;
+            player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
+        });
+
+        // Touch Controls
+        let touchId = null;
+        let touchStartPos = { x: 0, y: 0 };
+        const joystick = document.getElementById('touch-joystick');
+        const thumb = document.getElementById('touch-thumb');
+
+        joystick.addEventListener('touchstart', (e) => {
+            const touch = e.changedTouches[0];
+            touchId = touch.identifier;
+            const rect = joystick.getBoundingClientRect();
+            touchStartPos = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        });
+
+        joystick.addEventListener('touchmove', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === touchId) {
+                    const dx = touch.clientX - touchStartPos.x;
+                    const dy = touch.clientY - touchStartPos.y;
+                    const dist = Math.min(45, Math.hypot(dx, dy));
+                    const angle = Math.atan2(dy, dx);
+                    thumb.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+                    
+                    keys.w = dy < -15;
+                    keys.s = dy > 15;
+                    keys.a = dx < -15;
+                    keys.d = dx > 15;
+                }
+            }
+        });
+
+        joystick.addEventListener('touchend', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === touchId) {
+                    touchId = null;
+                    thumb.style.transform = `translate(0px, 0px)`;
+                    keys.w = keys.s = keys.a = keys.d = false;
+                }
+            }
+        });
+
+        let lastTouchX = 0, lastTouchY = 0;
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1 && !e.target.closest('#mobile-controls') && !state.inTent) {
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+            }
+        });
+        renderer.domElement.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1 && !e.target.closest('#mobile-controls') && !state.inTent) {
+                const dx = e.touches[0].clientX - lastTouchX;
+                const dy = e.touches[0].clientY - lastTouchY;
+                player.rotY -= dx * 0.005;
+                player.pitch -= dy * 0.005;
+                player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+            }
+        });
+
+        // --- Camping & Survival Mechanics ---
+        function handleInteraction() {
+            playSound('ui');
+            if (state.isNight) {
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+                const intersects = raycaster.intersectObjects(constellationsGroup.children);
+                if (intersects.length > 0) {
+                    const matched = constellations.find(c => c.mesh === intersects[0].object);
+                    if (matched) {
+                        document.getElementById('constellation-title').innerText = matched.name;
+                        document.getElementById('constellation-desc').innerText = matched.desc;
+                        document.getElementById('constellation-modal').style.display = 'flex';
+                        return;
+                    }
+                }
+            }
+
+            // Wood
+            for (let i = interactables.length - 1; i >= 0; i--) {
+                const item = interactables[i];
+                if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.5) {
+                    item.active = false;
+                    scene.remove(item.mesh);
+                    state.woodCount++;
+                    playSound('wood');
+                    updateHUD();
+                    showPrompt("Gathered 1 firewood.");
+                    return;
+                }
+            }
+
+            // Stream Water
+            if (Math.abs(player.x) < 5 && Math.abs(player.z) < 150) {
+                state.hasWater = 'stream';
+                playSound('drink');
+                updateHUD();
+                showPrompt("Collected fresh stream water.");
+                return;
+            }
+
+            // Tent Sleep / Exit
+            if (tentMesh && Math.hypot(player.x - tentMesh.position.x, player.z - tentMesh.position.z) < 3.0) {
+                toggleTentSleep();
+                return;
+            }
+
+            // Campfire interactions
+            if (fireMesh && Math.hypot(player.x - fireMesh.position.x, player.z - fireMesh.position.z) < 3.0) {
+                if (!state.fireLit && state.woodCount > 0) {
+                    state.woodCount--;
+                    state.fireLit = true;
+                    state.fireFuel = 100;
+                    fireMesh.getObjectByName('flame').visible = true;
+                    playSound('fire');
+                    updateHUD();
+                    showPrompt("Lit the campfire!");
+                    return;
+                } else if (state.fireLit && state.woodCount > 0) {
+                    state.woodCount--;
+                    state.fireFuel = Math.min(100, state.fireFuel + 50);
+                    playSound('wood');
+                    updateHUD();
+                    showPrompt("Added wood to campfire.");
+                    return;
+                }
+            }
+        }
+
+        function toggleTentSleep() {
+            state.inTent = !state.inTent;
+            if (state.inTent) {
+                state.timeOfDay = 7.0; // Wake up at morning
+                state.stamina = 100;
+                updateTimeLighting();
+                showPrompt("Sleeping in tent... Restored energy to 100% and woke up at sunrise.");
+                document.exitPointerLock();
+            } else {
+                showPrompt("Stepped out of the tent.");
+            }
+            updateHUD();
+        }
+
+        // Action Buttons
+        document.getElementById('action-tent').addEventListener('click', () => {
+            playSound('ui');
+            if (!state.tentBuilt) {
+                const tentGroup = new THREE.Group();
+                const tentMat = new THREE.MeshStandardMaterial({ color: 0x3b5323, roughness: 0.8, side: THREE.DoubleSide });
+                const tentGeo = new THREE.ConeGeometry(2, 2.5, 4);
+                const tentMeshObj = new THREE.Mesh(tentGeo, tentMat);
+                tentMeshObj.position.y = 1.25;
+                tentMeshObj.rotation.y = Math.PI / 4;
+                tentMeshObj.castShadow = true;
+                tentGroup.add(tentMeshObj);
+
+                // Spawn directly in front of player
+                const tx = player.x + Math.sin(player.rotY) * 3;
+                const tz = player.z + Math.cos(player.rotY) * 3;
+                tentGroup.position.set(tx, 0, tz);
+                scene.add(tentGroup);
+                tentMesh = tentGroup;
+                state.tentBuilt = true;
+                document.getElementById('lbl-tent').innerText = "Sleep in Tent";
+                showPrompt("Pitched canvas tent directly in front of you.");
+            } else {
+                toggleTentSleep();
+            }
+            updateHUD();
+        });
+
+        document.getElementById('action-fire').addEventListener('click', () => {
+            playSound('ui');
+            if (!state.fireBuilt) {
+                const fireGroup = new THREE.Group();
+                const stoneMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 });
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.3), stoneMat);
+                    stone.position.set(Math.cos(angle) * 0.8, 0.15, Math.sin(angle) * 0.8);
+                    fireGroup.add(stone);
+                }
+                const flameMat = new THREE.MeshBasicMaterial({ color: 0xff5500 });
+                const flame = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 5), flameMat);
+                flame.name = 'flame';
+                flame.position.y = 0.6;
+                flame.visible = false;
+                fireGroup.add(flame);
+
+                // Spawn directly in front of player view
+                const fx = player.x + Math.sin(player.rotY) * 3;
+                const fz = player.z + Math.cos(player.rotY) * 3;
+                fireGroup.position.set(fx, 0, fz);
+                scene.add(fireGroup);
+                campfireMesh = fireGroup;
+                fireMesh = fireGroup;
+                state.fireBuilt = true;
+                document.getElementById('lbl-fire').innerText = "Light Fire";
+                showPrompt("Built stone fire ring in front of you.");
+            } else if (state.fireBuilt && !state.fireLit && state.woodCount > 0) {
+                state.woodCount--;
+                state.fireLit = true;
+                state.fireFuel = 100;
+                if (fireMesh) fireMesh.getObjectByName('flame').visible = true;
+                playSound('fire');
+                document.getElementById('lbl-fire').innerText = "Extinguish Fire";
+                showPrompt("Lit campfire!");
+            } else if (state.fireBuilt && state.fireLit) {
+                state.fireLit = false;
+                if (fireMesh) fireMesh.getObjectByName('flame').visible = false;
+                document.getElementById('lbl-fire').innerText = "Light Fire";
+                showPrompt("Extinguished campfire.");
+            }
+            updateHUD();
+        });
+
+        document.getElementById('action-water').addEventListener('click', () => {
+            playSound('ui');
+            if (Math.abs(player.x) < 6) {
+                state.hasWater = 'stream';
+                updateHUD();
+                showPrompt("Collected fresh stream water.");
+            } else {
+                showPrompt("You must be near the stream to collect water.");
+            }
+        });
+
+        document.getElementById('action-tea').addEventListener('click', () => {
+            playSound('ui');
+            if (state.hasWater === 'stream' && state.fireLit) {
+                state.hasWater = false;
+                state.teaCount++;
+                playSound('drink');
+                updateHUD();
+                showPrompt("Boiled stream water into hot aromatic tea!");
+            } else if (!state.fireLit) {
+                showPrompt("You need a lit campfire to boil water!");
+            } else {
+                showPrompt("You need water from the stream first.");
+            }
+        });
+
+        document.getElementById('action-food').addEventListener('click', () => {
+            playSound('ui');
+            if (state.fireLit && (state.foodCount > 0 || state.cookedFoodCount > 0)) {
+                if (state.foodCount > 0) {
+                    state.foodCount--;
+                    state.cookedFoodCount++;
+                    playSound('fire');
+                    showPrompt("Cooked provisions over the campfire!");
+                } else if (state.cookedFoodCount > 0) {
+                    state.cookedFoodCount--;
+                    state.stamina = Math.min(100, state.stamina + 40);
+                    playSound('eat');
+                    showPrompt("Ate cooked food! Stamina restored.");
+                }
+                updateHUD();
+            } else if (!state.fireLit) {
+                showPrompt("You need a lit campfire to cook food!");
+            } else {
+                showPrompt("You have no raw provisions left.");
+            }
+        });
+
+        // Top bar buttons
+        document.getElementById('btn-toggle-time').addEventListener('click', () => {
+            state.timeOfDay = state.timeOfDay >= 18 ? 8 : 20;
+            updateTimeLighting();
+            playSound('ui');
+        });
+
+        document.getElementById('btn-toggle-weather').addEventListener('click', () => {
+            state.weatherMode = (state.weatherMode + 1) % 3;
+            updateWeatherEffects();
+            playSound('ui');
+        });
+
+        document.getElementById('btn-mute').addEventListener('click', () => {
+            state.muted = !state.muted;
+            document.getElementById('btn-mute').innerText = state.muted ? "Audio: OFF" : "Audio: ON";
+            playSound('ui');
+        });
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            initAudio();
+            state.gameStarted = true;
+            document.getElementById('start-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('start-screen').style.display = 'none';
+            }, 500);
+            renderer.domElement.requestPointerLock();
+        });
+
+        document.getElementById('close-constellation-btn').addEventListener('click', () => {
+            document.getElementById('constellation-modal').style.display = 'none';
+        });
+
+        document.getElementById('touch-action-btn').addEventListener('click', () => {
+            handleInteraction();
+        });
+
+        document.getElementById('touch-run-btn').addEventListener('click', () => {
+            state.isRunning = !state.isRunning;
+            document.getElementById('touch-run-btn').style.background = state.isRunning ? '#38bdf8' : 'rgba(15, 23, 42, 0.85)';
+        });
+
+        let promptTimeout = null;
+        function showPrompt(text) {
+            const el = document.getElementById('interaction-prompt');
+            el.innerText = text;
+            el.classList.add('visible');
+            clearTimeout(promptTimeout);
+            promptTimeout = setTimeout(() => {
+                el.classList.remove('visible');
+            }, 3000);
+        }
+
+        function updateHUD() {
+            const hours = Math.floor(state.timeOfDay);
+            const mins = Math.floor((state.timeOfDay - hours) * 60);
+            document.getElementById('hud-time').innerText = `${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
+            const weatherNames = ['Clear', 'Rain', 'Fog'];
+            document.getElementById('hud-weather').innerText = weatherNames[state.weatherMode];
+            document.getElementById('hud-wood').innerText = state.woodCount;
+            document.getElementById('hud-water').innerText = state.hasWater ? 'Fresh' : 'Empty';
+            document.getElementById('hud-tea').innerText = state.teaCount;
+            document.getElementById('hud-food').innerText = `${state.foodCount} (Raw) / ${state.cookedFoodCount} (Cooked)`;
+            document.getElementById('hud-stamina').innerText = `${Math.floor(state.stamina)}%`;
+        }
+
+        // --- Lighting & Weather ---
+        function updateTimeLighting() {
+            state.isNight = state.timeOfDay < 6 || state.timeOfDay > 19;
+            
+            let sunIntensity = 1.2;
+            let bgColor = 0xcbe6ff;
+            let fogColor = 0xcbe6ff;
+
+            if (state.isNight) {
+                sunIntensity = 0.05;
+                bgColor = 0x05080c;
+                fogColor = 0x070b12;
+                starsGroup.material.opacity = 0.95; // Fully luminous in clear night
+                constellationsGroup.visible = true;
+            } else if (state.timeOfDay < 8 || state.timeOfDay > 17) {
+                sunIntensity = 0.5;
+                bgColor = 0xfdbcb4;
+                fogColor = 0xfdbcb4;
+                starsGroup.material.opacity = 0.2;
+                constellationsGroup.visible = false;
+            } else {
+                sunIntensity = 1.2;
+                bgColor = state.weatherMode === 2 ? 0x94a3b8 : 0xcbe6ff;
+                fogColor = bgColor;
+                starsGroup.material.opacity = 0;
+                constellationsGroup.visible = false;
+            }
+
+            sunLight.intensity = sunIntensity;
+            scene.background.setHex(bgColor);
+            scene.fog.color.setHex(fogColor);
+
+            const sunAngle = ((state.timeOfDay - 6) / 24) * Math.PI * 2;
+            sunLight.position.x = Math.cos(sunAngle) * 100;
+            sunLight.position.y = Math.sin(sunAngle) * 100;
+        }
+
+        function updateWeatherEffects() {
+            if (state.weatherMode === 1) {
+                rainSystem.visible = true;
+                scene.fog.density = 0.025;
+            } else if (state.weatherMode === 2) {
+                rainSystem.visible = false;
+                scene.fog.density = 0.055;
+            } else {
+                rainSystem.visible = false;
+                scene.fog.density = 0.012;
+            }
+            updateTimeLighting();
+        }
+
+        // --- Minimap ---
+        const minimapCanvas = document.getElementById('minimap-canvas');
+        const minimapCtx = minimapCanvas.getContext('2d');
+
+        function drawMinimap() {
+            minimapCtx.clearRect(0, 0, 130, 130);
+            minimapCtx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            minimapCtx.fillRect(0, 0, 130, 130);
+
+            const scale = 1.5;
+            const cx = 65;
+            const cy = 65;
+
+            minimapCtx.fillStyle = '#38bdf8';
+            minimapCtx.fillRect(cx - (6 * scale), 0, 8 * scale, 130);
+
+            minimapCtx.fillStyle = '#f43f5e';
+            minimapCtx.beginPath();
+            minimapCtx.arc(cx, cy, 4, 0, Math.PI * 2);
+            minimapCtx.fill();
+
+            if (state.fireBuilt && campfireMesh) {
+                const dx = (campfireMesh.position.x - player.x) * scale + cx;
+                const dz = (campfireMesh.position.z - player.z) * scale + cy;
+                minimapCtx.fillStyle = '#f97316';
+                minimapCtx.beginPath();
+                minimapCtx.arc(dx, dz, 3, 0, Math.PI * 2);
+                minimapCtx.fill();
+            }
+        }
+
+        // --- Main Loop ---
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = Math.min(clock.getDelta(), 0.1);
+
+            if (state.gameStarted && !state.inTent) {
+                state.timeOfDay += state.timeSpeed * (dt / 60);
+                if (state.timeOfDay >= 24) state.timeOfDay = 0;
+                updateTimeLighting();
+
+                let moveSpeed = player.speed;
+                if (keys.shift && state.stamina > 5) {
+                    moveSpeed *= player.runMultiplier;
+                    state.stamina = Math.max(0, state.stamina - 25 * dt);
+                } else {
+                    state.stamina = Math.min(100, state.stamina + 15 * dt);
+                }
+
+                let moveX = 0;
+                let moveZ = 0;
+                if (keys.w) moveZ -= 1;
+                if (keys.s) moveZ += 1;
+                if (keys.a) moveX -= 1;
+                if (keys.d) moveX += 1;
+
+                if (moveX !== 0 || moveZ !== 0) {
+                    const len = Math.hypot(moveX, moveZ);
+                    moveX /= len;
+                    moveZ /= len;
+
+                    const forwardX = Math.sin(player.rotY);
+                    const forwardZ = Math.cos(player.rotY);
+                    const rightX = Math.sin(player.rotY + Math.PI / 2);
+                    const rightZ = Math.cos(player.rotY + Math.PI / 2);
+
+                    const nx = player.x + (forwardX * -moveZ + rightX * moveX) * moveSpeed * dt;
+                    const nz = player.z + (forwardZ * -moveZ + rightZ * moveX) * moveSpeed * dt;
+
+                    if (Math.abs(nx) < 140 && Math.abs(nz) < 140) {
+                        player.x = nx;
+                        player.z = nz;
+                    }
+                }
+
+                camera.position.x = player.x;
+                camera.position.z = player.z;
+                camera.position.y = 1.7 + Math.sin(Date.now() * 0.008) * (keys.shift ? 0.08 : 0.03);
+
+                const targetLook = new THREE.Vector3(
+                    player.x + Math.sin(player.rotY) * 10,
+                    camera.position.y + Math.sin(player.pitch) * 10,
+                    player.z + Math.cos(player.rotY) * 10
+                );
+                camera.lookAt(targetLook);
+
+                if (rainSystem.visible) {
+                    const positions = rainGeo.attributes.position.array;
+                    for (let i = 1; i < positions.length; i += 3) {
+                        positions[i] -= 35 * dt;
+                        if (positions[i] < 0) positions[i] = 50;
+                    }
+                    rainGeo.attributes.position.needsUpdate = true;
+                }
+
+                let promptText = "";
+                if (state.isNight) {
+                    const raycaster = new THREE.Raycaster();
+                    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+                    const intersects = raycaster.intersectObjects(constellationsGroup.children);
+                    if (intersects.length > 0) {
+                        promptText = "Click to Inspect Constellation";
+                    }
+                }
+
+                if (!promptText) {
+                    for (let item of interactables) {
+                        if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.5) {
+                            promptText = "Press [E] to Gather Wood";
+                            break;
+                        }
+                    }
+                }
+
+                if (!promptText && Math.abs(player.x) < 6 && Math.abs(player.z) < 150) {
+                    promptText = "Press [E] to Collect Stream Water";
+                }
+
+                if (!promptText && tentMesh && Math.hypot(player.x - tentMesh.position.x, player.z - tentMesh.position.z) < 3.0) {
+                    promptText = "Press [E] to Sleep in Tent";
+                }
+
+                if (!promptText && campfireMesh && Math.hypot(player.x - campfireMesh.position.x, player.z - campfireMesh.position.z) < 3.0) {
+                    promptText = state.fireLit ? "Press [E] to Add Wood to Fire" : "Press [E] to Light Campfire";
+                }
+
+                const promptEl = document.getElementById('interaction-prompt');
+                if (promptText) {
+                    promptEl.innerText = promptText;
+                    promptEl.classList.add('visible');
+                } else {
+                    promptEl.classList.remove('visible');
+                }
+
+                drawMinimap();
+                updateHUD();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        updateTimeLighting();
+        animate();
+    </script>
+</body>
+</html>
