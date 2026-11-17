@@ -106,7 +106,7 @@
         .btn:active {
             transform: translateY(1px);
         }
-        /* Center Crosshair / Prompt */
+        /* Center Crosshair / Prompt / Notification */
         .center-hud {
             position: absolute;
             top: 50%;
@@ -128,10 +128,6 @@
             box-shadow: 0 0 4px rgba(0,0,0,0.5);
             transition: transform 0.1s;
         }
-        .crosshair.active {
-            transform: scale(1.6);
-            background-color: #38bdf8;
-        }
         .interaction-prompt {
             margin-top: 15px;
             background: rgba(15, 23, 42, 0.85);
@@ -150,6 +146,32 @@
             opacity: 1;
             transform: translateY(0);
         }
+        /* Notification Banner */
+        #notification-banner {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.92);
+            border: 2px solid #38bdf8;
+            color: #f8fafc;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(56, 189, 248, 0.4);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 60;
+            text-align: center;
+            max-width: 500px;
+        }
+        #notification-banner.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.05);
+        }
+
         /* Bottom Area */
         .bottom-bar {
             display: flex;
@@ -157,7 +179,6 @@
             align-items: flex-end;
             width: 100%;
         }
-        /* Radar Minimap */
         .minimap-container {
             width: 130px;
             height: 130px;
@@ -172,7 +193,6 @@
             width: 100%;
             height: 100%;
         }
-        /* Crafting / Action Menu */
         .action-menu {
             display: flex;
             gap: 8px;
@@ -181,6 +201,9 @@
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(10px);
+            flex-wrap: wrap;
+            max-width: 650px;
+            justify-content: flex-end;
         }
         .action-btn {
             background: rgba(30, 41, 59, 0.9);
@@ -260,7 +283,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
 
-        /* Start / Constellation / Sleep Overlays */
+        /* Overlays & Modals */
         .overlay-screen {
             position: absolute;
             top: 0;
@@ -336,7 +359,7 @@
         }
 
         /* Constellation Modal */
-        #constellation-modal {
+        .modal-screen {
             display: none;
             position: absolute;
             top: 0;
@@ -351,26 +374,49 @@
             flex-direction: column;
             padding: 20px;
         }
-        .constellation-card {
-            background: rgba(15, 23, 42, 0.9);
+        .modal-card {
+            background: rgba(15, 23, 42, 0.92);
             border: 1px solid rgba(56, 189, 248, 0.4);
             border-radius: 16px;
             padding: 30px;
-            max-width: 450px;
+            max-width: 480px;
             width: 100%;
             text-align: center;
             box-shadow: 0 20px 50px rgba(0,0,0,0.6);
         }
-        .constellation-card h2 {
+        .modal-card h2 {
             color: #38bdf8;
             margin-bottom: 12px;
             font-size: 1.5rem;
         }
-        .constellation-card p {
+        .modal-card p {
             color: #cbd5e1;
             font-size: 0.95rem;
             line-height: 1.6;
             margin-bottom: 25px;
+        }
+
+        /* Photo Album Gallery Grid */
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            max-height: 320px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 4px;
+        }
+        .photo-thumb {
+            width: 100%;
+            height: 110px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .no-photos {
+            color: #94a3b8;
+            font-style: italic;
+            padding: 20px;
         }
 
         @media (max-width: 768px) {
@@ -389,29 +435,43 @@
 
     <div id="canvas-container"></div>
 
+    <!-- Notification Banner -->
+    <div id="notification-banner">Notification</div>
+
     <!-- Start Screen Overlay -->
     <div id="start-screen" class="overlay-screen">
         <h1>Serenade Woods</h1>
-        <p>Step into a serene forest solitude. Wander through pine groves, gather firewood, pitch your tent, build a crackling campfire, boil hot tea, cook food, and gaze at starry night constellations.</p>
+        <p>Step into a serene forest solitude. Wander through pine groves, forage wild medicinal herbs and berries, pitch your tent, build a campfire, boil tea, snap photographs, and gaze at starry constellations.</p>
         <div class="instructions-box">
             <h3>Controls & Gameplay</h3>
             <ul>
                 <li><strong>Move:</strong> WASD / Arrow Keys or Virtual Joystick</li>
                 <li><strong>Look:</strong> Mouse Drag or Touch Swipe</li>
                 <li><strong>Run:</strong> Hold Shift</li>
-                <li><strong>Interact:</strong> Click on objects or press [E] near wood, stream, tent, or fire</li>
-                <li><strong>Stargaze:</strong> Click on glowing constellations at night</li>
+                <li><strong>Interact:</strong> Click on objects or press [E] near wood, herbs, stream, tent, or fire</li>
+                <li><strong>Camera:</strong> Press [C] or click Photo to snap a picture</li>
             </ul>
         </div>
         <button class="primary-btn interactive" id="start-btn">Enter Forest</button>
     </div>
 
     <!-- Constellation Modal -->
-    <div id="constellation-modal" class="interactive">
-        <div class="constellation-card">
+    <div id="constellation-modal" class="modal-screen interactive">
+        <div class="modal-card">
             <h2 id="constellation-title">Orion the Hunter</h2>
-            <p id="constellation-desc">A prominent constellation located on the celestial equator, visible throughout the world. Dominated by bright stars Rigel and Betelgeuse, ancient symbol of the celestial hunter.</p>
+            <p id="constellation-desc">A prominent celestial constellation featuring bright stars Rigel and Betelgeuse.</p>
             <button class="primary-btn" id="close-constellation-btn">Return to Stargazing</button>
+        </div>
+    </div>
+
+    <!-- Photo Album Modal -->
+    <div id="album-modal" class="modal-screen interactive">
+        <div class="modal-card" style="max-width: 540px;">
+            <h2>Forest Photo Album</h2>
+            <div id="album-container" class="photo-grid">
+                <div class="no-photos">No photos captured yet. Press [C] in the forest to take pictures!</div>
+            </div>
+            <button class="primary-btn" id="close-album-btn">Close Album</button>
         </div>
     </div>
 
@@ -425,9 +485,8 @@
                     <div class="stat-item">Time: <span id="hud-time">12:00</span></div>
                     <div class="stat-item">Weather: <span id="hud-weather">Clear</span></div>
                     <div class="stat-item">Wood: <span id="hud-wood">0</span></div>
-                    <div class="stat-item">Water: <span id="hud-water">Empty</span></div>
+                    <div class="stat-item">Herbs/Berries: <span id="hud-items">0</span></div>
                     <div class="stat-item">Tea: <span id="hud-tea">0</span></div>
-                    <div class="stat-item">Food: <span id="hud-food">1</span></div>
                     <div class="stat-item">Stamina: <span id="hud-stamina">100%</span></div>
                 </div>
             </div>
@@ -454,7 +513,9 @@
                 <button class="action-btn interactive" id="action-fire">🔥 <span id="lbl-fire">Build Fire</span></button>
                 <button class="action-btn interactive" id="action-water">💧 <span id="lbl-water">Get Water</span></button>
                 <button class="action-btn interactive" id="action-tea">🍵 <span id="lbl-tea">Boil Tea</span></button>
-                <button class="action-btn interactive" id="action-food">🍖 <span id="lbl-food">Cook Food</span></button>
+                <button class="action-btn interactive" id="action-food">🫐 <span id="lbl-food">Eat Berries</span></button>
+                <button class="action-btn interactive" id="action-camera">📷 <span>Photo [C]</span></button>
+                <button class="action-btn interactive" id="action-album">🖼️ <span>Album</span></button>
             </div>
         </div>
     </div>
@@ -474,14 +535,13 @@
         // --- Game State & Variables ---
         const state = {
             timeOfDay: 13.0, // 0 to 24
-            timeSpeed: 0.05, // hours per second
+            timeSpeed: 0.04, // hours per second
             isNight: false,
             weatherMode: 0, // 0: Clear, 1: Rain, 2: Fog
             woodCount: 0,
-            hasWater: false, // false, 'stream', 'fresh'
+            hasWater: false, // false or 'stream'
             teaCount: 0,
-            foodCount: 1, // Raw provisions
-            cookedFoodCount: 0,
+            foragedItems: [], // Array of collected herb/berry objects with lore
             stamina: 100,
             isRunning: false,
             muted: false,
@@ -490,10 +550,10 @@
             inTent: false,
             fireBuilt: false,
             fireLit: false,
-            fireFuel: 0
+            fireFuel: 0,
+            photos: []
         };
 
-        // Player position & movement
         const player = {
             x: 0,
             z: 25,
@@ -505,26 +565,24 @@
             radius: 0.8
         };
 
-        // World Objects & Entities
         let trees = [];
-        let rocks = [];
-        let ferns = [];
         let interactables = [];
-        let particles = [];
         let starsGroup, constellationsGroup;
         let campfireMesh = null;
         let tentMesh = null;
+        let rainSystem = null;
 
         // Audio System via Web Audio API
         let audioCtx = null;
         let ambientGain = null;
+        let ambientSource = null;
 
         function initAudio() {
             if (audioCtx) return;
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             
             ambientGain = audioCtx.createGain();
-            ambientGain.gain.value = 0.15;
+            ambientGain.gain.value = state.muted ? 0 : 0.15;
             ambientGain.connect(audioCtx.destination);
 
             const bufferSize = audioCtx.sampleRate * 2;
@@ -534,18 +592,18 @@
                 output[i] = Math.random() * 2 - 1;
             }
 
-            const whiteNoise = audioCtx.createBufferSource();
-            whiteNoise.buffer = noiseBuffer;
-            whiteNoise.loop = true;
+            ambientSource = audioCtx.createBufferSource();
+            ambientSource.buffer = noiseBuffer;
+            ambientSource.loop = true;
 
             const filter = audioCtx.createBiquadFilter();
             filter.type = 'bandpass';
-            filter.frequency.value = 250;
+            filter.frequency.value = 220;
             filter.Q.value = 1.2;
 
-            whiteNoise.connect(filter);
+            ambientSource.connect(filter);
             filter.connect(ambientGain);
-            whiteNoise.start();
+            ambientSource.start();
         }
 
         function playSound(type) {
@@ -583,14 +641,22 @@
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
                 osc.start(now);
                 osc.stop(now + 0.4);
-            } else if (type === 'eat') {
+            } else if (type === 'forage') {
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.exponentialRampToValueAtTime(150, now + 0.25);
-                gain.gain.setValueAtTime(0.25, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.frequency.setValueAtTime(500, now);
+                osc.frequency.exponentialRampToValueAtTime(700, now + 0.12);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
                 osc.start(now);
-                osc.stop(now + 0.25);
+                osc.stop(now + 0.12);
+            } else if (type === 'shutter') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.setValueAtTime(400, now + 0.08);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
             } else if (type === 'ui') {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(600, now);
@@ -611,7 +677,7 @@
         const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 1.7, 25);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
@@ -639,7 +705,7 @@
         sunLight.shadow.bias = -0.0005;
         scene.add(sunLight);
 
-        // --- Canvas Texture Generators ---
+        // --- Procedural Textures ---
         function createBarkTexture() {
             const canvas = document.createElement('canvas');
             canvas.width = 256;
@@ -682,14 +748,14 @@
         const barkTex = createBarkTexture();
         const groundTex = createGroundTexture();
 
-        // --- Procedural Terrain & Environment ---
+        // --- Terrain & Clean Stream ---
         const groundGeo = new THREE.PlaneGeometry(300, 300, 64, 64);
         const posAttr = groundGeo.attributes.position;
         for (let i = 0; i < posAttr.count; i++) {
             const px = posAttr.getX(i);
             const py = posAttr.getY(i);
             let z = Math.sin(px * 0.03) * Math.cos(py * 0.03) * 1.5;
-            if (Math.abs(px) < 6) z = -0.5; // Stream valley
+            if (Math.abs(px) < 6.5) z = -0.5; // Stream valley flat bed
             posAttr.setZ(i, z);
         }
         groundGeo.computeVertexNormals();
@@ -704,8 +770,8 @@
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // Stream (River)
-        const streamGeo = new THREE.PlaneGeometry(8, 300);
+        // Stream River
+        const streamGeo = new THREE.PlaneGeometry(10, 300);
         const streamMat = new THREE.MeshStandardMaterial({
             color: 0x38bdf8,
             roughness: 0.1,
@@ -722,7 +788,7 @@
         const bridgeGroup = new THREE.Group();
         const plankMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.8 });
         for (let i = -6; i <= 6; i++) {
-            const plank = new THREE.Mesh(new THREE.BoxGeometry(9, 0.2, 0.8), plankMat);
+            const plank = new THREE.Mesh(new THREE.BoxGeometry(11, 0.2, 0.8), plankMat);
             plank.position.set(0, 0.1, i * 1.0);
             plank.castShadow = true;
             plank.receiveShadow = true;
@@ -731,7 +797,7 @@
         bridgeGroup.position.set(0, 0, 5);
         scene.add(bridgeGroup);
 
-        // --- Procedural Trees ---
+        // --- Trees (Carefully excluding the stream channel |x| < 7) ---
         const treeMat = new THREE.MeshStandardMaterial({ color: 0x2d4a22, roughness: 0.8 });
         const trunkMat = new THREE.MeshStandardMaterial({ map: barkTex, roughness: 0.9 });
 
@@ -761,15 +827,15 @@
             trees.push({ x, z, radius: 1.2 });
         }
 
-        for (let i = 0; i < 140; i++) {
+        for (let i = 0; i < 150; i++) {
             const x = (Math.random() - 0.5) * 260;
             const z = (Math.random() - 0.5) * 260;
-            if (Math.abs(x) > 5 || Math.abs(z - 5) > 10) {
+            if (Math.abs(x) > 7.5 || Math.abs(z - 5) > 12) {
                 createPineTree(x, z);
             }
         }
 
-        // Collectible Wood Logs
+        // --- Collectibles: Wood Logs & Forageable Herbs/Berries ---
         const logGeo = new THREE.CylinderGeometry(0.2, 0.2, 2, 5);
         const logMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
 
@@ -783,15 +849,47 @@
             interactables.push({ type: 'wood', mesh: log, x, z, active: true });
         }
 
-        for (let i = 0; i < 25; i++) {
+        for (let i = 0; i < 30; i++) {
             const x = (Math.random() - 0.5) * 120;
             const z = (Math.random() - 0.5) * 120;
-            if (Math.abs(x) > 6) spawnWoodLog(x, z);
+            if (Math.abs(x) > 7.5) spawnWoodLog(x, z);
+        }
+
+        // Forageable herbs and berries definitions
+        const herbTypes = [
+            { name: "Wild Mint Leaves", desc: "Aromatic mint leaves harvested from damp forest moss. Perfect for brewing soothing herbal tea.", type: 'herb', color: 0x10b981 },
+            { name: "Healing Chamomile", desc: "Delicate white and yellow flowers with gentle restorative properties that soothe fatigue.", type: 'herb', color: 0xfacc15 },
+            { name: "Forest Blueberries", desc: "Plump wild berries rich in natural sugars. Instantly restores stamina and energy.", type: 'berry', color: 0x6366f1 }
+        ];
+
+        const herbGeo = new THREE.SphereGeometry(0.3, 8, 8);
+
+        function spawnForageable(x, z) {
+            const template = herbTypes[Math.floor(Math.random() * herbTypes.length)];
+            const mat = new THREE.MeshStandardMaterial({ color: template.color, roughness: 0.5 });
+            const mesh = new THREE.Mesh(herbGeo, mat);
+            mesh.position.set(x, 0.2, z);
+            mesh.castShadow = true;
+            scene.add(mesh);
+            interactables.push({
+                type: 'forage',
+                mesh: mesh,
+                x: x,
+                z: z,
+                active: true,
+                itemData: { ...template }
+            });
+        }
+
+        for (let i = 0; i < 25; i++) {
+            const x = (Math.random() - 0.5) * 130;
+            const z = (Math.random() - 0.5) * 130;
+            if (Math.abs(x) > 7.5) spawnForageable(x, z);
         }
 
         // --- Starry Sky & Constellations ---
         const starsGeo = new THREE.BufferGeometry();
-        const starCount = 1200;
+        const starCount = 1500;
         const starPos = [];
         for (let i = 0; i < starCount; i++) {
             const u = Math.random();
@@ -802,14 +900,14 @@
             starPos.push(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
         }
         starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2.5, transparent: true, opacity: 0 });
+        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2.8, transparent: true, opacity: 0 });
         starsGroup = new THREE.Points(starsGeo, starsMat);
         scene.add(starsGroup);
 
         const constellationsData = [
-            { name: "Orion the Hunter", pos: new THREE.Vector3(120, 250, -300), desc: "Dominant winter constellation featuring Rigel and Betelgeuse, legendary celestial hunter." },
-            { name: "Ursa Major", pos: new THREE.Vector3(-180, 280, 200), desc: "The Great Bear containing the Big Dipper asterism, pointing steadfastly to Polaris." },
-            { name: "Cassiopeia", pos: new THREE.Vector3(200, 300, 150), desc: "Distinctive 'W' shaped northern constellation representing the vain mythological queen." }
+            { name: "Orion the Hunter", pos: new THREE.Vector3(120, 250, -300), desc: "Dominant celestial constellation featuring Rigel and Betelgeuse, ancient symbol of the celestial hunter." },
+            { name: "Ursa Major", pos: new THREE.Vector3(-180, 280, 200), desc: "The Great Bear containing the Big Dipper asterism, pointing steadfastly toward Polaris." },
+            { name: "Cassiopeia", pos: new THREE.Vector3(200, 300, 150), desc: "Distinctive 'W' shaped northern constellation representing the mythological queen." }
         ];
 
         constellationsGroup = new THREE.Group();
@@ -825,16 +923,17 @@
         scene.add(constellationsGroup);
         constellationsGroup.visible = false;
 
-        // Weather System Particles
+        // --- Weather Rain Particles ---
         const rainGeo = new THREE.BufferGeometry();
-        const rainCount = 1500;
+        const rainCount = 1800;
         const rainPos = [];
         for (let i = 0; i < rainCount; i++) {
-            rainPos.push((Math.random() - 0.5) * 100, Math.random() * 50, (Math.random() - 0.5) * 100);
+            rainPos.push((Math.random() - 0.5) * 120, Math.random() * 60, (Math.random() - 0.5) * 120);
         }
         rainGeo.setAttribute('position', new THREE.Float32BufferAttribute(rainPos, 3));
         const rainMat = new THREE.PointsMaterial({ color: 0xaaaaee, size: 0.6, transparent: true, opacity: 0 });
-        const rainSystem = new THREE.Points(rainGeo, rainMat);
+        rainSystem = new THREE.Points(rainGeo, rainMat);
+        rainSystem.visible = false;
         scene.add(rainSystem);
 
         // --- Input Handling ---
@@ -848,6 +947,7 @@
             if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
             if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { keys.shift = true; state.isRunning = true; }
             if (e.code === 'KeyE') handleInteraction();
+            if (e.code === 'KeyC') takePhoto();
         });
 
         window.addEventListener('keyup', (e) => {
@@ -875,7 +975,7 @@
             player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
         });
 
-        // Touch Controls
+        // Touch controls
         let touchId = null;
         let touchStartPos = { x: 0, y: 0 };
         const joystick = document.getElementById('touch-joystick');
@@ -935,7 +1035,7 @@
             }
         });
 
-        // --- Camping & Survival Mechanics ---
+        // --- Interaction & Survival System ---
         function handleInteraction() {
             playSound('ui');
             if (state.isNight) {
@@ -953,36 +1053,43 @@
                 }
             }
 
-            // Wood
+            // Interactables (Wood logs & Forageables)
             for (let i = interactables.length - 1; i >= 0; i--) {
                 const item = interactables[i];
                 if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.5) {
                     item.active = false;
                     scene.remove(item.mesh);
-                    state.woodCount++;
-                    playSound('wood');
+
+                    if (item.type === 'wood') {
+                        state.woodCount++;
+                        playSound('wood');
+                        showNotification("Gathered 1 firewood.");
+                    } else if (item.type === 'forage') {
+                        state.foragedItems.push(item.itemData);
+                        playSound('forage');
+                        showNotification(`Foraged ${item.itemData.name}: ${item.itemData.desc}`);
+                    }
                     updateHUD();
-                    showPrompt("Gathered 1 firewood.");
                     return;
                 }
             }
 
-            // Stream Water
-            if (Math.abs(player.x) < 5 && Math.abs(player.z) < 150) {
+            // Stream Water Collection
+            if (Math.abs(player.x) < 6 && Math.abs(player.z) < 150) {
                 state.hasWater = 'stream';
                 playSound('drink');
                 updateHUD();
-                showPrompt("Collected fresh stream water.");
+                showNotification("Collected fresh mountain stream water.");
                 return;
             }
 
-            // Tent Sleep / Exit
+            // Tent Sleep
             if (tentMesh && Math.hypot(player.x - tentMesh.position.x, player.z - tentMesh.position.z) < 3.0) {
                 toggleTentSleep();
                 return;
             }
 
-            // Campfire interactions
+            // Campfire
             if (fireMesh && Math.hypot(player.x - fireMesh.position.x, player.z - fireMesh.position.z) < 3.0) {
                 if (!state.fireLit && state.woodCount > 0) {
                     state.woodCount--;
@@ -991,14 +1098,14 @@
                     fireMesh.getObjectByName('flame').visible = true;
                     playSound('fire');
                     updateHUD();
-                    showPrompt("Lit the campfire!");
+                    showNotification("Lit the campfire!");
                     return;
                 } else if (state.fireLit && state.woodCount > 0) {
                     state.woodCount--;
                     state.fireFuel = Math.min(100, state.fireFuel + 50);
                     playSound('wood');
                     updateHUD();
-                    showPrompt("Added wood to campfire.");
+                    showNotification("Added wood to campfire.");
                     return;
                 }
             }
@@ -1007,18 +1114,25 @@
         function toggleTentSleep() {
             state.inTent = !state.inTent;
             if (state.inTent) {
-                state.timeOfDay = 7.0; // Wake up at morning
+                state.timeOfDay = 7.0; // Wake up at sunrise
                 state.stamina = 100;
                 updateTimeLighting();
-                showPrompt("Sleeping in tent... Restored energy to 100% and woke up at sunrise.");
+                showNotification("Sleeping in tent... Woke up refreshed at sunrise with 100% stamina.");
                 document.exitPointerLock();
             } else {
-                showPrompt("Stepped out of the tent.");
+                showNotification("Stepped out of the tent into the fresh morning air.");
             }
             updateHUD();
         }
 
-        // Action Buttons
+        function takePhoto() {
+            playSound('shutter');
+            const dataUrl = renderer.domElement.toDataURL('image/png');
+            state.photos.push(dataUrl);
+            showNotification("📷 Photo captured and saved to Album!");
+        }
+
+        // --- Action Buttons ---
         document.getElementById('action-tent').addEventListener('click', () => {
             playSound('ui');
             if (!state.tentBuilt) {
@@ -1031,7 +1145,6 @@
                 tentMeshObj.castShadow = true;
                 tentGroup.add(tentMeshObj);
 
-                // Spawn directly in front of player
                 const tx = player.x + Math.sin(player.rotY) * 3;
                 const tz = player.z + Math.cos(player.rotY) * 3;
                 tentGroup.position.set(tx, 0, tz);
@@ -1039,7 +1152,7 @@
                 tentMesh = tentGroup;
                 state.tentBuilt = true;
                 document.getElementById('lbl-tent').innerText = "Sleep in Tent";
-                showPrompt("Pitched canvas tent directly in front of you.");
+                showNotification("Pitched canvas tent in front of you.");
             } else {
                 toggleTentSleep();
             }
@@ -1064,29 +1177,27 @@
                 flame.visible = false;
                 fireGroup.add(flame);
 
-                // Spawn directly in front of player view
                 const fx = player.x + Math.sin(player.rotY) * 3;
                 const fz = player.z + Math.cos(player.rotY) * 3;
                 fireGroup.position.set(fx, 0, fz);
                 scene.add(fireGroup);
                 campfireMesh = fireGroup;
-                fireMesh = fireGroup;
                 state.fireBuilt = true;
                 document.getElementById('lbl-fire').innerText = "Light Fire";
-                showPrompt("Built stone fire ring in front of you.");
+                showNotification("Built stone fire ring.");
             } else if (state.fireBuilt && !state.fireLit && state.woodCount > 0) {
                 state.woodCount--;
                 state.fireLit = true;
                 state.fireFuel = 100;
-                if (fireMesh) fireMesh.getObjectByName('flame').visible = true;
+                if (campfireMesh) campfireMesh.getObjectByName('flame').visible = true;
                 playSound('fire');
                 document.getElementById('lbl-fire').innerText = "Extinguish Fire";
-                showPrompt("Lit campfire!");
+                showNotification("Lit campfire!");
             } else if (state.fireBuilt && state.fireLit) {
                 state.fireLit = false;
-                if (fireMesh) fireMesh.getObjectByName('flame').visible = false;
+                if (campfireMesh) campfireMesh.getObjectByName('flame').visible = false;
                 document.getElementById('lbl-fire').innerText = "Light Fire";
-                showPrompt("Extinguished campfire.");
+                showNotification("Extinguished campfire.");
             }
             updateHUD();
         });
@@ -1096,50 +1207,72 @@
             if (Math.abs(player.x) < 6) {
                 state.hasWater = 'stream';
                 updateHUD();
-                showPrompt("Collected fresh stream water.");
+                showNotification("Collected fresh stream water.");
             } else {
-                showPrompt("You must be near the stream to collect water.");
+                showNotification("You must be near the stream to collect water.");
             }
         });
 
         document.getElementById('action-tea').addEventListener('click', () => {
             playSound('ui');
-            if (state.hasWater === 'stream' && state.fireLit) {
+            const hasMint = state.foragedItems.findIndex(i => i.type === 'herb');
+            if (state.hasWater === 'stream' && state.fireLit && hasMint !== -1) {
                 state.hasWater = false;
+                state.foragedItems.splice(hasMint, 1);
                 state.teaCount++;
+                state.stamina = Math.min(100, state.stamina + 35);
                 playSound('drink');
                 updateHUD();
-                showPrompt("Boiled stream water into hot aromatic tea!");
+                showNotification("🍵 Brewed and drank hot herbal mint tea! Stamina restored.");
             } else if (!state.fireLit) {
-                showPrompt("You need a lit campfire to boil water!");
+                showNotification("You need a lit campfire to boil tea!");
+            } else if (hasMint === -1) {
+                showNotification("You need to forage wild mint herbs to brew tea!");
             } else {
-                showPrompt("You need water from the stream first.");
+                showNotification("You need fresh stream water first.");
             }
         });
 
         document.getElementById('action-food').addEventListener('click', () => {
             playSound('ui');
-            if (state.fireLit && (state.foodCount > 0 || state.cookedFoodCount > 0)) {
-                if (state.foodCount > 0) {
-                    state.foodCount--;
-                    state.cookedFoodCount++;
-                    playSound('fire');
-                    showPrompt("Cooked provisions over the campfire!");
-                } else if (state.cookedFoodCount > 0) {
-                    state.cookedFoodCount--;
-                    state.stamina = Math.min(100, state.stamina + 40);
-                    playSound('eat');
-                    showPrompt("Ate cooked food! Stamina restored.");
-                }
+            const berryIdx = state.foragedItems.findIndex(i => i.type === 'berry');
+            if (berryIdx !== -1) {
+                const item = state.foragedItems.splice(berryIdx, 1)[0];
+                state.stamina = Math.min(100, state.stamina + 25);
+                playSound('drink');
                 updateHUD();
-            } else if (!state.fireLit) {
-                showPrompt("You need a lit campfire to cook food!");
+                showNotification(`🫐 Ate ${item.name}! Delicious and revitalizing. Stamina restored.`);
             } else {
-                showPrompt("You have no raw provisions left.");
+                showNotification("No wild berries in inventory. Forage for berries around the forest!");
             }
         });
 
-        // Top bar buttons
+        document.getElementById('action-camera').addEventListener('click', () => {
+            takePhoto();
+        });
+
+        document.getElementById('action-album').addEventListener('click', () => {
+            playSound('ui');
+            const container = document.getElementById('album-container');
+            container.innerHTML = '';
+            if (state.photos.length === 0) {
+                container.innerHTML = '<div class="no-photos">No photos captured yet. Press [C] in the forest to take pictures!</div>';
+            } else {
+                state.photos.forEach(url => {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.className = 'photo-thumb';
+                    container.appendChild(img);
+                });
+            }
+            document.getElementById('album-modal').style.display = 'flex';
+        });
+
+        document.getElementById('close-album-btn').addEventListener('click', () => {
+            document.getElementById('album-modal').style.display = 'none';
+        });
+
+        // Top bar controls
         document.getElementById('btn-toggle-time').addEventListener('click', () => {
             state.timeOfDay = state.timeOfDay >= 18 ? 8 : 20;
             updateTimeLighting();
@@ -1154,6 +1287,7 @@
 
         document.getElementById('btn-mute').addEventListener('click', () => {
             state.muted = !state.muted;
+            if (ambientGain) ambientGain.gain.value = state.muted ? 0 : 0.15;
             document.getElementById('btn-mute').innerText = state.muted ? "Audio: OFF" : "Audio: ON";
             playSound('ui');
         });
@@ -1192,6 +1326,17 @@
             }, 3000);
         }
 
+        let notifTimeout = null;
+        function showNotification(text) {
+            const banner = document.getElementById('notification-banner');
+            banner.innerText = text;
+            banner.classList.add('show');
+            clearTimeout(notifTimeout);
+            notifTimeout = setTimeout(() => {
+                banner.classList.remove('show');
+            }, 4000);
+        }
+
         function updateHUD() {
             const hours = Math.floor(state.timeOfDay);
             const mins = Math.floor((state.timeOfDay - hours) * 60);
@@ -1199,9 +1344,8 @@
             const weatherNames = ['Clear', 'Rain', 'Fog'];
             document.getElementById('hud-weather').innerText = weatherNames[state.weatherMode];
             document.getElementById('hud-wood').innerText = state.woodCount;
-            document.getElementById('hud-water').innerText = state.hasWater ? 'Fresh' : 'Empty';
+            document.getElementById('hud-items').innerText = state.foragedItems.length;
             document.getElementById('hud-tea').innerText = state.teaCount;
-            document.getElementById('hud-food').innerText = `${state.foodCount} (Raw) / ${state.cookedFoodCount} (Cooked)`;
             document.getElementById('hud-stamina').innerText = `${Math.floor(state.stamina)}%`;
         }
 
@@ -1217,13 +1361,13 @@
                 sunIntensity = 0.05;
                 bgColor = 0x05080c;
                 fogColor = 0x070b12;
-                starsGroup.material.opacity = 0.95; // Fully luminous in clear night
-                constellationsGroup.visible = true;
+                starsGroup.material.opacity = (state.weatherMode === 0) ? 0.95 : 0.2; // Stars visible in clear night
+                constellationsGroup.visible = (state.weatherMode === 0);
             } else if (state.timeOfDay < 8 || state.timeOfDay > 17) {
                 sunIntensity = 0.5;
                 bgColor = 0xfdbcb4;
                 fogColor = 0xfdbcb4;
-                starsGroup.material.opacity = 0.2;
+                starsGroup.material.opacity = 0.1;
                 constellationsGroup.visible = false;
             } else {
                 sunIntensity = 1.2;
@@ -1248,7 +1392,7 @@
                 scene.fog.density = 0.025;
             } else if (state.weatherMode === 2) {
                 rainSystem.visible = false;
-                scene.fog.density = 0.055;
+                scene.fog.density = 0.06;
             } else {
                 rainSystem.visible = false;
                 scene.fog.density = 0.012;
@@ -1256,7 +1400,7 @@
             updateTimeLighting();
         }
 
-        // --- Minimap ---
+        // --- Minimap Radar ---
         const minimapCanvas = document.getElementById('minimap-canvas');
         const minimapCtx = minimapCanvas.getContext('2d');
 
@@ -1269,14 +1413,17 @@
             const cx = 65;
             const cy = 65;
 
+            // Stream river
             minimapCtx.fillStyle = '#38bdf8';
-            minimapCtx.fillRect(cx - (6 * scale), 0, 8 * scale, 130);
+            minimapCtx.fillRect(cx - (7 * scale), 0, 10 * scale, 130);
 
+            // Player dot
             minimapCtx.fillStyle = '#f43f5e';
             minimapCtx.beginPath();
             minimapCtx.arc(cx, cy, 4, 0, Math.PI * 2);
             minimapCtx.fill();
 
+            // Campfire dot
             if (state.fireBuilt && campfireMesh) {
                 const dx = (campfireMesh.position.x - player.x) * scale + cx;
                 const dz = (campfireMesh.position.z - player.z) * scale + cy;
@@ -1287,7 +1434,7 @@
             }
         }
 
-        // --- Main Loop ---
+        // --- Main Game Loop ---
         let clock = new THREE.Clock();
 
         function animate() {
@@ -1349,13 +1496,13 @@
                     const positions = rainGeo.attributes.position.array;
                     for (let i = 1; i < positions.length; i += 3) {
                         positions[i] -= 35 * dt;
-                        if (positions[i] < 0) positions[i] = 50;
+                        if (positions[i] < 0) positions[i] = 60;
                     }
                     rainGeo.attributes.position.needsUpdate = true;
                 }
 
                 let promptText = "";
-                if (state.isNight) {
+                if (state.isNight && state.weatherMode === 0) {
                     const raycaster = new THREE.Raycaster();
                     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
                     const intersects = raycaster.intersectObjects(constellationsGroup.children);
@@ -1367,7 +1514,7 @@
                 if (!promptText) {
                     for (let item of interactables) {
                         if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.5) {
-                            promptText = "Press [E] to Gather Wood";
+                            promptText = item.type === 'wood' ? "Press [E] to Gather Wood" : `Press [E] to Forage ${item.itemData.name}`;
                             break;
                         }
                     }
