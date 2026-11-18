@@ -262,7 +262,6 @@
             sittingBench: null,
             binocularsActive: false,
             activeJournalTab: 'flora',
-            // Compendium & Progression State
             discovered: { "Wild Mint Herb": false, "Healing Chamomile": false, "Forest Blueberries": false, "Golden Chanterelle": false, "Forest Deer": false, "Red Fox": false, "Barn Owl": false },
             bountiesCompleted: { "Campfire by Stream": false, "Morning Bridge Mist": false, "Tent Constellation": false },
             constellationsCompleted: 0,
@@ -271,7 +270,7 @@
         };
 
         const player = { x: 12, z: 24, y: 0, rotY: Math.PI, pitch: 0, speed: 4.5, runMultiplier: 1.85 };
-        let interactables = [], trees = [], wildlifeEntities = [], constellationObjects = [];
+        let interactables = [], trees = [], wildlifeEntities = [];
         let campfireMesh = null, campfireLight = null, tentMesh = null, rainSystem = null;
         let windShaderUniforms = [];
 
@@ -287,7 +286,6 @@
             ambientGain.gain.value = state.muted ? 0 : 0.12;
             ambientGain.connect(audioCtx.destination);
 
-            // Stream spatial sound generator
             const bufSize = audioCtx.sampleRate * 2;
             const noiseBuf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
             const output = noiseBuf.getChannelData(0);
@@ -301,7 +299,6 @@
             streamSrc.connect(streamFilter); streamFilter.connect(streamGain); streamGain.connect(ambientGain);
             streamSrc.start();
 
-            // Campfire crackle generator
             const fireSrc = audioCtx.createBufferSource();
             fireSrc.buffer = noiseBuf; fireSrc.loop = true;
             const fireFilter = audioCtx.createBiquadFilter();
@@ -465,7 +462,7 @@
 
         // Spawn Forageable Herbs & Berries
         const herbTemplates = [
-            { name: "Wild Mint Herb", desc: "Aromatic mint leaves. Brews into invigorating tea.", type: 'herb' },
+            { name: "Wild Mint Herb", desc: "Aromatic leaves. Brews into invigorating tea.", type: 'herb' },
             { name: "Healing Chamomile", desc: "Delicate white petals. Soothes fatigue.", type: 'herb' },
             { name: "Forest Blueberries", desc: "Plump wild berries. Instantly restores stamina.", type: 'berry' }
         ];
@@ -620,7 +617,6 @@
             if (state.sittingBench) { exitSitMode(); return; }
             if (fishingActive) { resolveFishing(); return; }
 
-            // Constellation tracing during night
             if (state.isNight && state.weatherMode === 0) {
                 const raycaster = new THREE.Raycaster();
                 raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
@@ -638,7 +634,6 @@
                 }
             }
 
-            // Interactables (Wood, Forage, Pages)
             for (let i = interactables.length - 1; i >= 0; i--) {
                 const item = interactables[i];
                 if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.6) {
@@ -656,7 +651,6 @@
                 }
             }
 
-            // Sit on crafted bench
             for (let b of state.structures || []) {
                 if (Math.hypot(player.x - b.position.x, player.z - b.position.z) < 2.5) {
                     enterSitMode(b); return;
@@ -705,7 +699,6 @@
             const url = renderer.domElement.toDataURL('image/png');
             state.photos.push(url);
 
-            // Check Bounties
             if (state.isNight && campfireMesh && Math.abs(player.x - campfireMesh.position.x) < 8) state.bountiesCompleted["Campfire by Stream"] = true;
             if (state.weatherMode === 0 && Math.abs(player.x - 0) < 5) state.bountiesCompleted["Morning Bridge Mist"] = true;
             if (state.isNight && tentMesh && Math.abs(player.x - tentMesh.position.x) < 6) state.bountiesCompleted["Tent Constellation"] = true;
@@ -897,7 +890,6 @@
                 document.getElementById('activity-fill').style.width = `${state.activity.progress}%`;
             }
 
-            // Wildlife AI & Stealth
             wildlifeEntities.forEach(fa => {
                 const dist = Math.hypot(player.x - fa.x, player.z - fa.z);
                 const isLoud = keys.shift || state.isRunning;
@@ -908,7 +900,6 @@
                 fa.mesh.position.set(fa.x, getTerrainHeight(fa.x, fa.z), fa.z);
             });
 
-            // Diegetic Audio Distance Scaling
             if (fireGain && campfireMesh) {
                 const df = Math.hypot(player.x - campfireMesh.position.x, player.z - campfireMesh.position.z);
                 fireGain.gain.value = state.fireLit && df < 18 ? 0.35 * (1 - df / 18) : 0;
@@ -945,7 +936,6 @@
                     player.z + Math.cos(player.rotY) * 10
                 ));
 
-                // Interaction Prompts
                 let prompt = "";
                 for (let item of interactables) {
                     if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.6) {
