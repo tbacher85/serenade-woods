@@ -3,788 +3,435 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Serenade Woods — Cinematic 3D Exploration Engine</title>
+    <title>Serenade Woods - Alpine Wilderness Simulator</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #05080c;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: #f0f4f8;
-        }
-        #canvas-container {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-        /* Cinematic Post-Processing Overlay (Vignette & Subtle Grain) */
-        #cinematic-vignette {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 5;
-            background: radial-gradient(circle at center, transparent 58%, rgba(3, 6, 12, 0.72) 100%);
-        }
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-        }
-        .interactive {
-            pointer-events: auto;
-        }
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            width: 100%;
-        }
-        .panel {
-            background: rgba(11, 17, 29, 0.78);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            border-radius: 12px;
-            padding: 12px 18px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-        }
-        .game-title {
-            font-size: 1.05rem;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            color: #38bdf8;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, auto);
-            gap: 5px 18px;
-            font-size: 0.83rem;
-            color: #cbd5e1;
-        }
-        .stat-item span {
-            font-weight: 600;
-            color: #fff;
-        }
-        .controls-panel {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .btn {
-            background: rgba(20, 30, 48, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            color: #f8fafc;
-            padding: 8px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.83rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-        }
-        .btn:hover {
-            background: rgba(38, 53, 80, 0.95);
-            border-color: rgba(56, 189, 248, 0.5);
-            color: #38bdf8;
-            transform: translateY(-1px);
-        }
-        .center-hud {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            pointer-events: none;
-        }
-        .crosshair {
-            width: 6px;
-            height: 6px;
-            background-color: rgba(255, 255, 255, 0.75);
-            border: 1px solid rgba(0, 0, 0, 0.6);
-            border-radius: 50%;
-            box-shadow: 0 0 6px rgba(0,0,0,0.6);
-        }
-        .interaction-prompt {
-            margin-top: 14px;
-            background: rgba(11, 17, 29, 0.88);
-            border: 1px solid #38bdf8;
-            color: #38bdf8;
-            padding: 7px 16px;
-            border-radius: 8px;
-            font-size: 0.88rem;
-            font-weight: 600;
-            box-shadow: 0 4px 20px rgba(56, 189, 248, 0.25);
-            opacity: 0;
-            transform: translateY(8px);
-            transition: opacity 0.2s, transform 0.2s;
-        }
-        .interaction-prompt.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        #notification-banner {
-            position: absolute;
-            top: 22%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(11, 17, 29, 0.94);
-            border: 1px solid #38bdf8;
-            color: #f8fafc;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-size: 0.98rem;
-            font-weight: 600;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            z-index: 60;
-            text-align: center;
-            max-width: 520px;
-        }
-        #notification-banner.show {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1.02);
-        }
-        .bottom-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            width: 100%;
-        }
-        .minimap-container {
-            width: 130px;
-            height: 130px;
-            background: rgba(11, 17, 29, 0.85);
-            border: 2px solid rgba(255, 255, 255, 0.18);
-            border-radius: 50%;
-            overflow: hidden;
-            position: relative;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-        }
-        #minimap-canvas {
-            width: 100%;
-            height: 100%;
-        }
-        .action-menu {
-            display: flex;
-            gap: 8px;
-            background: rgba(11, 17, 29, 0.85);
-            padding: 10px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(12px);
-            flex-wrap: wrap;
-            max-width: 740px;
-            justify-content: flex-end;
-        }
-        .action-btn {
-            background: rgba(24, 35, 54, 0.92);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            color: #e2e8f0;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.78rem;
-            font-weight: 600;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
-            transition: all 0.2s;
-        }
-        .action-btn:hover:not(:disabled) {
-            background: #273854;
-            border-color: #38bdf8;
-            color: #38bdf8;
-        }
-        .action-btn span {
-            font-size: 0.68rem;
-            color: #94a3b8;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #0b111d; font-family: system-ui, -apple-system, sans-serif; color: #f8fafc; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        
+        /* UI Layer */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 24px; transition: opacity 0.4s ease; }
+        #ui-layer.contemplate-hidden { opacity: 0; pointer-events: none; }
+
+        .hud-panel { background: rgba(11, 17, 29, 0.78); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; gap: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); pointer-events: auto; }
+        .hud-group { display: flex; flex-direction: column; gap: 3px; }
+        .hud-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; }
+        .hud-value { font-size: 16px; font-weight: 600; color: #f8fafc; }
+
+        /* Top Bar & Controls */
+        #top-bar { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
+        .control-btn { background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.18); color: #f8fafc; padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; pointer-events: auto; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .control-btn:hover { background: #38bdf8; color: #0f172a; border-color: #38bdf8; transform: translateY(-1px); }
+
+        /* Action Toolbar */
+        #action-toolbar { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 10px; pointer-events: auto; background: rgba(11, 17, 29, 0.85); backdrop-filter: blur(14px); padding: 14px 22px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.14); }
+        .action-btn { background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+        .action-btn:hover { background: #38bdf8; color: #0f172a; border-color: #38bdf8; }
+
+        /* Interaction Prompt */
+        #interaction-prompt { position: absolute; bottom: 130px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.92); border: 1px solid #38bdf8; padding: 10px 22px; border-radius: 20px; font-size: 14px; font-weight: 600; color: #38bdf8; box-shadow: 0 6px 20px rgba(56, 189, 248, 0.3); opacity: 0; transition: opacity 0.25s ease; pointer-events: none; }
+        #interaction-prompt.visible { opacity: 1; }
+
+        /* Notification Banner */
+        #notification-banner { position: absolute; top: 90px; left: 50%; transform: translateX(-50%) translateY(-20px); background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.2); padding: 12px 28px; border-radius: 14px; font-size: 14px; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: none; z-index: 20; text-align: center; }
+        #notification-banner.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* Minimap */
+        #minimap-container { width: 124px; height: 124px; border-radius: 50%; overflow: hidden; border: 2px solid rgba(255,255,255,0.25); background: #0b111d; box-shadow: 0 8px 24px rgba(0,0,0,0.5); position: relative; }
+        #minimap-canvas { width: 100%; height: 100%; display: block; }
+
+        /* Field Naturalist's Journal Modal */
+        #journal-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 8, 15, 0.88); backdrop-filter: blur(18px); z-index: 100; display: none; justify-content: center; align-items: center; padding: 40px; pointer-events: auto; }
+        .journal-book { width: 900px; height: 600px; background: #111827; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.7); }
+        .journal-header { display: flex; justify-content: space-between; align-items: center; padding: 22px 30px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.9); }
+        .journal-title { font-size: 20px; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 10px; }
+        .journal-tabs { display: flex; gap: 10px; padding: 0 30px; background: rgba(15, 23, 42, 0.6); border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .tab-btn { background: none; border: none; color: #94a3b8; padding: 14px 20px; font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+        .journal-body { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        .entry-card { background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+        .entry-card.locked { opacity: 0.5; filter: grayscale(0.6); }
+        .entry-title { font-size: 16px; font-weight: 600; color: #f8fafc; display: flex; justify-content: space-between; }
+        .entry-desc { font-size: 13px; color: #94a3b8; line-height: 1.5; }
+        .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .photo-item { background: #1e293b; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .photo-thumb { width: 100%; height: 120px; object-fit: cover; }
+        .photo-caption { padding: 10px; font-size: 12px; color: #cbd5e1; }
+
+        /* Tactile Activity Minigame Bar */
+        #activity-bar-container { position: absolute; bottom: 210px; left: 50%; transform: translateX(-50%); width: 320px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 14px; padding: 16px; display: none; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.6); pointer-events: auto; z-index: 30; }
+        #activity-label { font-size: 13px; font-weight: 600; color: #38bdf8; margin-bottom: 10px; }
+        .activity-track { width: 100%; height: 16px; background: #1e293b; border-radius: 8px; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .activity-sweet-spot { position: absolute; left: 65%; width: 22%; height: 100%; background: rgba(52, 211, 153, 0.4); border-left: 2px solid #34d399; border-right: 2px solid #34d399; }
+        #activity-fill { width: 0%; height: 100%; background: #38bdf8; border-radius: 8px; transition: width 0.05s linear; }
+
+        /* Cinematic Vignette & Spyglass View */
+        #cinematic-vignette { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; box-shadow: inset 0 0 120px rgba(0,0,0,0.75); transition: all 0.3s ease; }
+        #cinematic-vignette.binoculars { box-shadow: inset 0 0 0 450px rgba(0,0,0,0.92), inset 0 0 150px rgba(0,0,0,0.95); }
+        #binoculars-hud { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 450px; height: 450px; border: 2px dashed rgba(56, 189, 248, 0.35); border-radius: 50%; display: none; pointer-events: none; z-index: 6; }
+
+        /* Contemplate Exit Prompt */
+        #contemplate-exit-hint { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; padding: 12px 28px; border-radius: 20px; font-size: 15px; font-weight: 600; color: #38bdf8; cursor: pointer; display: none; z-index: 40; box-shadow: 0 10px 30px rgba(56, 189, 248, 0.3); }
+
+        /* Start Screen Overlay */
+        #start-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #090d16 0%, #111827 100%); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px; padding: 30px; text-align: center; }
+        #start-screen h1 { font-size: 42px; font-weight: 800; letter-spacing: -1px; color: #f8fafc; background: linear-gradient(to right, #f8fafc, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #start-screen p { font-size: 16px; color: #94a3b8; max-width: 540px; line-height: 1.6; }
+        .start-btn { background: #38bdf8; color: #0f172a; border: none; padding: 16px 40px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 30px rgba(56, 189, 248, 0.4); transition: all 0.2s; }
+        .start-btn:hover { background: #7dd3fc; transform: translateY(-2px); }
 
         /* Mobile Controls */
-        #mobile-controls {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            display: none;
-            justify-content: space-between;
-            pointer-events: none;
-            z-index: 20;
-        }
-        .touch-pad {
-            width: 130px;
-            height: 130px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            position: relative;
-            pointer-events: auto;
-            touch-action: none;
-        }
-        .touch-thumb {
-            width: 50px;
-            height: 50px;
-            background: rgba(56, 189, 248, 0.65);
-            border-radius: 50%;
-            position: absolute;
-            top: 40px;
-            left: 40px;
-            pointer-events: none;
-            transition: transform 0.05s;
-        }
-        .touch-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            pointer-events: auto;
-        }
-        .touch-btn {
-            background: rgba(11, 17, 29, 0.88);
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            color: #fff;
-            padding: 12px 20px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
-        }
+        #mobile-controls { position: absolute; bottom: 30px; left: 30px; width: 130px; height: 130px; background: rgba(255,255,255,0.06); border: 2px solid rgba(255,255,255,0.15); border-radius: 50%; display: none; z-index: 15; touch-action: none; }
+        #touch-joystick { position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px; border-radius: 50%; }
+        #touch-thumb { position: absolute; top: 35px; left: 35px; width: 30px; height: 30px; background: #38bdf8; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.5); pointer-events: none; transition: transform 0.05s ease-out; }
+        #mobile-action-buttons { position: absolute; bottom: 30px; right: 30px; display: none; gap: 12px; z-index: 15; }
+        .mob-btn { width: 56px; height: 56px; background: rgba(11, 17, 29, 0.88); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; color: #f8fafc; font-size: 20px; display: flex; justify-content: center; align-items: center; box-shadow: 0 6px 20px rgba(0,0,0,0.5); cursor: pointer; }
 
-        /* Overlays & Modals */
-        .overlay-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(6, 10, 16, 0.94);
-            backdrop-filter: blur(18px);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 30px;
-            text-align: center;
-            transition: opacity 0.5s ease;
-        }
-        .overlay-screen h1 {
-            font-size: 2.6rem;
-            font-weight: 800;
-            color: #f8fafc;
-            margin-bottom: 10px;
-            letter-spacing: 0.06em;
-            background: linear-gradient(135deg, #38bdf8, #818cf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .overlay-screen p {
-            font-size: 1.02rem;
-            color: #94a3b8;
-            max-width: 600px;
-            line-height: 1.6;
-            margin-bottom: 24px;
-        }
-        .instructions-box {
-            background: rgba(20, 30, 48, 0.65);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 12px;
-            padding: 18px;
-            margin-bottom: 24px;
-            text-align: left;
-            max-width: 540px;
-            width: 100%;
-            font-size: 0.88rem;
-            color: #cbd5e1;
-        }
-        .instructions-box h3 {
-            color: #38bdf8;
-            margin-bottom: 8px;
-            font-size: 0.98rem;
-        }
-        .instructions-box ul {
-            padding-left: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .primary-btn {
-            background: linear-gradient(135deg, #0284c7, #4f46e5);
-            color: #fff;
-            border: none;
-            padding: 14px 36px;
-            font-size: 1.05rem;
-            font-weight: 700;
-            border-radius: 12px;
-            cursor: pointer;
-            box-shadow: 0 10px 25px rgba(2, 132, 199, 0.45);
-            transition: all 0.2s ease;
-        }
-        .primary-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 30px rgba(2, 132, 199, 0.65);
-        }
-
-        .modal-screen {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(4, 7, 12, 0.88);
-            backdrop-filter: blur(12px);
-            z-index: 50;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            padding: 20px;
-        }
-        .modal-card {
-            background: rgba(12, 19, 32, 0.95);
-            border: 1px solid rgba(56, 189, 248, 0.4);
-            border-radius: 16px;
-            padding: 28px;
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
-        }
-        .modal-card h2 {
-            color: #38bdf8;
-            margin-bottom: 12px;
-            font-size: 1.45rem;
-        }
-        .modal-card p {
-            color: #cbd5e1;
-            font-size: 0.95rem;
-            line-height: 1.6;
-            margin-bottom: 24px;
-        }
-        .photo-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            max-height: 320px;
-            overflow-y: auto;
-            margin-bottom: 20px;
-            padding: 4px;
-        }
-        .photo-thumb {
-            width: 100%;
-            height: 110px;
-            object-fit: cover;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-        .no-photos {
-            color: #94a3b8;
-            font-style: italic;
-            padding: 20px;
-        }
-
-        @media (max-width: 768px) {
-            #mobile-controls {
-                display: flex;
-            }
-            .controls-panel {
-                display: none;
-            }
+        @media (pointer: coarse) {
+            #mobile-controls, #mobile-action-buttons { display: flex; }
         }
     </style>
-    <!-- Three.js Core & Post-Processing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 </head>
 <body>
-
     <div id="canvas-container"></div>
     <div id="cinematic-vignette"></div>
-    <div id="notification-banner">Notification</div>
+    <div id="binoculars-hud"></div>
+    <div id="notification-banner"></div>
+    <div id="interaction-prompt">Press [E] to Interact</div>
+    <div id="contemplate-exit-hint">Stand Up from Bench [E]</div>
 
-    <!-- Start Screen Overlay -->
-    <div id="start-screen" class="overlay-screen">
+    <!-- Start Overlay -->
+    <div id="start-screen">
         <h1>Serenade Woods</h1>
-        <p>Cinematic 3D Forest & Camping Engine featuring Procedural PBR Normal/Roughness Maps, Rayleigh Atmospheric Sky, Vertex-Animated Wind Foliage, Dynamic Ripple Water, and UnrealBloom Post-Processing.</p>
-        <div class="instructions-box">
-            <h3>Controls & Features</h3>
-            <ul>
-                <li><strong>Move:</strong> WASD / Arrow Keys or Virtual Joystick | <strong>Run:</strong> Hold Shift</li>
-                <li><strong>Look:</strong> Mouse Drag or Touch Swipe</li>
-                <li><strong>Interact / Harvest:</strong> Press [E] near wood, grounded herbs, stream, tent, or fire</li>
-                <li><strong>Craft & Camp:</strong> Pitch tents, light blooming campfires, craft benches, brew herbal tea</li>
-                <li><strong>Camera:</strong> Press [C] to capture cinematic photos into your in-game Album</li>
-            </ul>
-        </div>
-        <button class="primary-btn interactive" id="start-btn">Enter Serenade Woods</button>
+        <p>Step into an unhurried alpine wilderness. Forage wild herbs, spot skittish wildlife, trace constellations under starry night skies, cast a line in mountain streams, and keep your Field Naturalist Journal.</p>
+        <button class="start-btn" id="start-btn">Enter Wilderness</button>
     </div>
 
-    <!-- Constellation Modal -->
-    <div id="constellation-modal" class="modal-screen interactive">
-        <div class="modal-card">
-            <h2 id="constellation-title">Orion the Hunter</h2>
-            <p id="constellation-desc">A prominent celestial constellation featuring bright stars Rigel and Betelgeuse.</p>
-            <button class="primary-btn" id="close-constellation-btn">Return to Stargazing</button>
+    <!-- Activity Minigame Overlay -->
+    <div id="activity-bar-container">
+        <div id="activity-label">Fishing — Press [E] in Green Zone!</div>
+        <div class="activity-track">
+            <div class="activity-sweet-spot"></div>
+            <div id="activity-fill"></div>
         </div>
     </div>
 
-    <!-- Photo Album Modal -->
-    <div id="album-modal" class="modal-screen interactive">
-        <div class="modal-card" style="max-width: 540px;">
-            <h2>Forest Photo Album</h2>
-            <div id="album-container" class="photo-grid">
-                <div class="no-photos">No photos captured yet. Press [C] in the forest to take pictures!</div>
+    <!-- Field Naturalist's Journal Modal -->
+    <div id="journal-modal">
+        <div class="journal-book">
+            <div class="journal-header">
+                <div class="journal-title">📖 Field Naturalist’s Journal</div>
+                <button class="control-btn" id="close-journal-btn">Close [J]</button>
             </div>
-            <button class="primary-btn" id="close-album-btn">Close Album</button>
+            <div class="journal-tabs">
+                <button class="tab-btn active" data-tab="flora">Flora & Fauna (<span id="tab-count-flora">7</span>)</button>
+                <button class="tab-btn" data-tab="bounties">Photo Bounties</button>
+                <button class="tab-btn" data-tab="stars">Constellations</button>
+                <button class="tab-btn" data-tab="lore">Lost Pages</button>
+                <button class="tab-btn" data-tab="album">Photo Album (<span id="album-count">0</span>)</button>
+            </div>
+            <div class="journal-body" id="journal-content">
+                <!-- Dynamically populated journal pages -->
+            </div>
         </div>
     </div>
 
     <!-- Main UI Layer -->
     <div id="ui-layer">
-        <div class="top-bar">
-            <div class="panel">
-                <div class="game-title">Serenade Woods</div>
-                <div class="stats-grid">
-                    <div class="stat-item">Time: <span id="hud-time">13:00</span></div>
-                    <div class="stat-item">Weather: <span id="hud-weather">Clear ☀️</span></div>
-                    <div class="stat-item">Wood: <span id="hud-wood">0</span></div>
-                    <div class="stat-item">Herbs/Berries: <span id="hud-items">0</span></div>
-                    <div class="stat-item">Structures: <span id="hud-structures">0</span></div>
-                    <div class="stat-item">Stamina: <span id="hud-stamina">100%</span></div>
+        <div id="top-bar">
+            <div class="hud-panel">
+                <div class="hud-group">
+                    <span class="hud-label">Time</span>
+                    <span class="hud-value" id="hud-time">13:00</span>
+                </div>
+                <div class="hud-group">
+                    <span class="hud-label">Weather</span>
+                    <span class="hud-value" id="hud-weather">Clear ☀️</span>
+                </div>
+                <div class="hud-group">
+                    <span class="hud-label">Stamina</span>
+                    <span class="hud-value" id="hud-stamina">100%</span>
                 </div>
             </div>
-            <div class="controls-panel">
-                <button class="btn interactive" id="btn-toggle-time">Time: Day</button>
-                <button class="btn interactive" id="btn-toggle-weather">Weather: Clear</button>
-                <button class="btn interactive" id="btn-mute">Audio: ON</button>
+            <div class="hud-panel" style="gap: 14px;">
+                <button class="control-btn" id="btn-journal">📖 Journal [J]</button>
+                <button class="control-btn" id="btn-binoculars">🔭 Spyglass [B]</button>
+                <button class="control-btn" id="btn-toggle-time">Time: Day</button>
+                <button class="control-btn" id="btn-toggle-weather">Weather: Clear</button>
+                <button class="control-btn" id="btn-mute">Audio: ON</button>
+            </div>
+            <div id="minimap-container">
+                <canvas id="minimap-canvas" width="124" height="124"></canvas>
             </div>
         </div>
 
-        <div class="center-hud">
-            <div class="crosshair" id="crosshair"></div>
-            <div class="interaction-prompt" id="interaction-prompt">Press [E] to Gather Wood</div>
-        </div>
-
-        <div class="bottom-bar">
-            <div class="minimap-container panel" style="padding:0;">
-                <canvas id="minimap-canvas" width="130" height="130"></canvas>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div id="action-toolbar">
+                <button class="action-btn" id="action-tent">⛺ <span id="lbl-tent">Pitch Tent</span></button>
+                <button class="action-btn" id="action-fire">🔥 <span id="lbl-fire">Build Fire Ring</span></button>
+                <button class="action-btn" id="action-bench">🪵 Craft Bench (2W)</button>
+                <button class="action-btn" id="action-lantern">🏮 Place Lantern (1W)</button>
+                <button class="action-btn" id="action-fish">🎣 <span id="lbl-fish">Craft Rod (2W)</span></button>
+                <button class="action-btn" id="action-water">💧 Collect Water</button>
+                <button class="action-btn" id="action-tea">🍵 Boil Tea</button>
+                <button class="action-btn" id="action-cook">🍲 Roast Meal</button>
+                <button class="action-btn" id="action-camera">📷 Snapshot [C]</button>
             </div>
-            <div class="action-menu">
-                <button class="action-btn interactive" id="action-tent">🏕️ <span id="lbl-tent">Pitch Tent</span></button>
-                <button class="action-btn interactive" id="action-fire">🔥 <span id="lbl-fire">Build Fire</span></button>
-                <button class="action-btn interactive" id="action-craft">🪵 <span>Craft Bench</span></button>
-                <button class="action-btn interactive" id="action-water">💧 <span id="lbl-water">Get Water</span></button>
-                <button class="action-btn interactive" id="action-tea">🍵 <span id="lbl-tea">Brew Tea</span></button>
-                <button class="action-btn interactive" id="action-food">🫐 <span id="lbl-food">Eat Berries</span></button>
-                <button class="action-btn interactive" id="action-camera">📷 <span>Photo [C]</span></button>
-                <button class="action-btn interactive" id="action-album">🖼️ <span>Album</span></button>
+            <div class="hud-panel" style="gap: 25px; padding: 10px 24px;">
+                <div>🪵 Wood: <span id="hud-wood" style="font-weight: 700; color: #38bdf8;">0</span></div>
+                <div>🌿 Inventory: <span id="hud-items" style="font-weight: 700; color: #34d399;">0 / 0</span></div>
+                <div>✨ Discovered: <span id="hud-journal" style="font-weight: 700; color: #fbbf24;">0/14</span></div>
             </div>
         </div>
     </div>
 
     <!-- Mobile Virtual Controls -->
     <div id="mobile-controls">
-        <div class="touch-pad" id="touch-joystick">
-            <div class="touch-thumb" id="touch-thumb"></div>
-        </div>
-        <div class="touch-buttons">
-            <button class="touch-btn interactive" id="touch-action-btn">Action</button>
-            <button class="touch-btn interactive" id="touch-run-btn">Run</button>
-        </div>
+        <div id="touch-joystick"><div id="touch-thumb"></div></div>
     </div>
+    <div id="mobile-action-buttons">
+        <div class="mob-btn" id="touch-action-btn">E</div>
+        <div class="mob-btn" id="touch-zoom-btn">🔭</div>
+        <div class="mob-btn" id="touch-run-btn">🏃</div>
+    </div>
+
+    <!-- Three.js & EffectComposer CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 
     <script>
         // =========================================================================
-        // 0. EXACT TERRAIN ELEVATION FUNCTION (FIXES FLOATING OBJECTS!)
+        // PROCEDURAL PBR TEXTURE GENERATOR (ZERO EXTERNAL ASSET DEPENDENCY)
         // =========================================================================
-        function getTerrainHeight(x, z) {
-            // Smooth stream valley trench along X = 0
-            const distFromCenter = Math.abs(x);
-            if (distFromCenter < 5.0) {
-                return -0.65;
-            }
-            // Smooth riverbank transition between |x| = 5.0 and |x| = 11.0
-            let bankFactor = 1.0;
-            if (distFromCenter < 11.0) {
-                const t = (distFromCenter - 5.0) / 6.0;
-                bankFactor = t * t * (3.0 - 2.0 * t); // Smoothstep
-            }
-            // Rolling organic forest hills
-            const hill = (Math.sin(x * 0.035) * Math.cos(z * 0.035) * 2.2) +
-                         (Math.sin(x * 0.09 + z * 0.07) * 0.55);
-            return THREE.MathUtils.lerp(-0.65, hill, bankFactor);
-        }
-
-        // =========================================================================
-        // 1. PROCEDURAL PBR TEXTURES (ALBEDO, NORMAL & ROUGHNESS VIA PERLIN/WORLEY)
-        // =========================================================================
-        function hash2D(x, y) {
-            const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
-            return n - Math.floor(n);
-        }
-
-        function valueNoise(x, y) {
-            const ix = Math.floor(x);
-            const iy = Math.floor(y);
-            const fx = x - ix;
-            const fy = y - iy;
-            const ux = fx * fx * (3.0 - 2.0 * fx);
-            const uy = fy * fy * (3.0 - 2.0 * fy);
-            const a = hash2D(ix, iy);
-            const b = hash2D(ix + 1, iy);
-            const c = hash2D(ix, iy + 1);
-            const d = hash2D(ix + 1, iy + 1);
-            return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
-        }
-
-        function fbm(x, y, octaves = 4) {
-            let val = 0;
-            let amp = 0.5;
-            let freq = 1.0;
-            for (let i = 0; i < octaves; i++) {
-                val += amp * valueNoise(x * freq, y * freq);
-                freq *= 2.02;
-                amp *= 0.5;
-            }
-            return val;
-        }
-
         function generatePBRTextureSet(type, size = 256) {
-            const heightMap = new Float32Array(size * size);
-            const albedoCanvas = document.createElement('canvas');
-            const roughCanvas = document.createElement('canvas');
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            if (type === 'ground') {
+                ctx.fillStyle = '#263a22'; ctx.fillRect(0, 0, size, size);
+                for (let i = 0; i < 4000; i++) {
+                    ctx.fillStyle = Math.random() > 0.5 ? '#1b2d18' : '#314c2b';
+                    ctx.fillRect(Math.random() * size, Math.random() * size, 2 + Math.random() * 3, 2 + Math.random() * 3);
+                }
+            } else if (type === 'bark') {
+                ctx.fillStyle = '#3a2718'; ctx.fillRect(0, 0, size, size);
+                for (let i = 0; i < 180; i++) {
+                    ctx.fillStyle = Math.random() > 0.5 ? '#24170d' : '#4d3522';
+                    ctx.fillRect(Math.random() * size, 0, 2 + Math.random() * 5, size);
+                }
+            } else if (type === 'stone') {
+                ctx.fillStyle = '#475569'; ctx.fillRect(0, 0, size, size);
+                for (let i = 0; i < 600; i++) {
+                    ctx.fillStyle = Math.random() > 0.5 ? '#334155' : '#64748b';
+                    ctx.beginPath();
+                    ctx.arc(Math.random() * size, Math.random() * size, 4 + Math.random() * 12, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            const map = new THREE.CanvasTexture(canvas);
+            map.wrapS = map.wrapT = THREE.RepeatWrapping;
+
             const normalCanvas = document.createElement('canvas');
-            albedoCanvas.width = roughCanvas.width = normalCanvas.width = size;
-            albedoCanvas.height = roughCanvas.height = normalCanvas.height = size;
-
-            const aCtx = albedoCanvas.getContext('2d');
-            const rCtx = roughCanvas.getContext('2d');
+            normalCanvas.width = normalCanvas.height = size;
             const nCtx = normalCanvas.getContext('2d');
-
-            const aImg = aCtx.createImageData(size, size);
-            const rImg = rCtx.createImageData(size, size);
-            const nImg = nCtx.createImageData(size, size);
-
-            // Step 1: Compute Heightfield + Albedo + Roughness
-            for (let y = 0; y < size; y++) {
-                for (let x = 0; x < size; x++) {
-                    const idx = y * size + x;
-                    const pIdx = idx * 4;
-                    let h = 0;
-                    let r = 0, g = 0, b = 0, rough = 200;
-
-                    if (type === 'bark') {
-                        // Vertical ridges + organic fissures
-                        const ridge = Math.sin((x / size) * Math.PI * 22 + fbm(x * 0.05, y * 0.02, 3) * 4.0) * 0.5 + 0.5;
-                        const detail = fbm(x * 0.15, y * 0.04, 4);
-                        h = ridge * 0.7 + detail * 0.3;
-                        r = 48 + h * 45;
-                        g = 34 + h * 30;
-                        b = 24 + h * 20;
-                        rough = 210 + (1.0 - h) * 40;
-                    } else if (type === 'ground') {
-                        // Moss, pine needles & loam soil
-                        const macro = fbm(x * 0.03, y * 0.03, 4);
-                        const micro = fbm(x * 0.18, y * 0.18, 3);
-                        h = macro * 0.65 + micro * 0.35;
-                        if (macro > 0.52) {
-                            // Rich forest moss
-                            r = 38 + h * 35;
-                            g = 68 + h * 48;
-                            b = 34 + h * 24;
-                            rough = 225;
-                        } else {
-                            // Pine needle litter & earth
-                            r = 66 + h * 42;
-                            g = 52 + h * 32;
-                            b = 34 + h * 20;
-                            rough = 240;
-                        }
-                    } else if (type === 'stone') {
-                        // Granitic rock with cracks
-                        const n = fbm(x * 0.06, y * 0.06, 4);
-                        const crack = Math.abs(fbm(x * 0.12 + 5.2, y * 0.12 + 1.3, 3) - 0.5) * 2.0;
-                        h = n * 0.8 + Math.min(1.0, crack * 2.5) * 0.2;
-                        const base = 95 + h * 65;
-                        r = base;
-                        g = base + 3;
-                        b = base + 8;
-                        rough = 175 + (1.0 - h) * 65;
-                    }
-
-                    heightMap[idx] = h;
-                    aImg.data[pIdx] = Math.min(255, Math.max(0, r));
-                    aImg.data[pIdx + 1] = Math.min(255, Math.max(0, g));
-                    aImg.data[pIdx + 2] = Math.min(255, Math.max(0, b));
-                    aImg.data[pIdx + 3] = 255;
-
-                    rImg.data[pIdx] = rImg.data[pIdx + 1] = rImg.data[pIdx + 2] = Math.min(255, Math.max(0, rough));
-                    rImg.data[pIdx + 3] = 255;
-                }
-            }
-
-            // Step 2: Sobel-like derivative filter to generate Tangent-Space Normal Map
-            const strength = type === 'bark' ? 3.5 : 2.4;
-            for (let y = 0; y < size; y++) {
-                for (let x = 0; x < size; x++) {
-                    const xm1 = (x - 1 + size) % size;
-                    const xp1 = (x + 1) % size;
-                    const ym1 = (y - 1 + size) % size;
-                    const yp1 = (y + 1) % size;
-
-                    const dX = (heightMap[y * size + xp1] - heightMap[y * size + xm1]) * strength;
-                    const dY = (heightMap[yp1 * size + x] - heightMap[ym1 * size + x]) * strength;
-                    const invLen = 1.0 / Math.sqrt(dX * dX + dY * dY + 1.0);
-
-                    const nx = (-dX * invLen * 0.5 + 0.5) * 255;
-                    const ny = (-dY * invLen * 0.5 + 0.5) * 255;
-                    const nz = (invLen * 0.5 + 0.5) * 255;
-
-                    const pIdx = (y * size + x) * 4;
-                    nImg.data[pIdx] = nx;
-                    nImg.data[pIdx + 1] = ny;
-                    nImg.data[pIdx + 2] = nz;
-                    nImg.data[pIdx + 3] = 255;
-                }
-            }
-
-            aCtx.putImageData(aImg, 0, 0);
-            rCtx.putImageData(rImg, 0, 0);
-            nCtx.putImageData(nImg, 0, 0);
-
-            const map = new THREE.CanvasTexture(albedoCanvas);
-            const roughnessMap = new THREE.CanvasTexture(roughCanvas);
+            nCtx.fillStyle = '#8080ff'; nCtx.fillRect(0, 0, size, size);
             const normalMap = new THREE.CanvasTexture(normalCanvas);
+            normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
 
-            [map, roughnessMap, normalMap].forEach(t => {
-                t.wrapS = THREE.RepeatWrapping;
-                t.wrapT = THREE.RepeatWrapping;
-            });
+            const roughCanvas = document.createElement('canvas');
+            roughCanvas.width = roughCanvas.height = size;
+            const rCtx = roughCanvas.getContext('2d');
+            rCtx.fillStyle = '#bcbcbc'; rCtx.fillRect(0, 0, size, size);
+            const roughnessMap = new THREE.CanvasTexture(roughCanvas);
+            roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
 
-            return { map, roughnessMap, normalMap };
+            return { map, normalMap, roughnessMap };
         }
 
         // =========================================================================
-        // GAME STATE & VARIABLES
+        // GLOBAL GAME STATE & PROCEDURAL HEIGHTMAP
         // =========================================================================
         const state = {
-            timeOfDay: 13.5,
-            timeSpeed: 0.04,
-            isNight: false,
-            weatherMode: 0, // 0: Clear ☀️, 1: Rain 🌧️, 2: Fog 🌫️
-            woodCount: 0,
-            hasWater: false,
-            foragedItems: [],
-            structures: [],
-            stamina: 100,
-            isRunning: false,
-            muted: false,
             gameStarted: false,
+            timeOfDay: 13.0,
+            timeSpeed: 0.8,
+            weatherMode: 0, // 0: Clear, 1: Rain, 2: Fog
+            isNight: false,
+            woodCount: 5,
+            rawFishCount: 0,
+            cookedFoodCount: 0,
+            foragedItems: [],
+            foundPages: [],
+            photos: [],
+            discovered: {},
+            bountiesCompleted: {},
             tentBuilt: false,
-            inTent: false,
             fireBuilt: false,
             fireLit: false,
-            fireFuel: 0,
-            photos: []
+            hasFishingRod: false,
+            hasWater: false,
+            inTent: false,
+            sittingBench: null,
+            binocularsActive: false,
+            isRunning: false,
+            stamina: 100,
+            structures: [],
+            activeJournalTab: 'flora',
+            muted: false
         };
 
-        const player = {
-            x: 12,
-            z: 24,
-            y: 0,
-            rotY: Math.PI,
-            pitch: 0,
-            speed: 4.5,
-            runMultiplier: 1.85,
-            radius: 0.8
-        };
+        const player = { x: 0, z: 22, rotY: 0, pitch: 0, speed: 4.8, runMultiplier: 1.7 };
+        const interactables = [];
+        const trees = [];
+        const wildlifeEntities = [];
+        const constellationObjects = [];
+        let tentMesh = null, campfireMesh = null, campfireLight = null;
+        let rainSystem = null, starsGroup = null, constellationsGroup = null, firefliesPoints = null;
 
-        let trees = [];
-        let interactables = [];
-        let starsGroup, constellationsGroup;
-        let campfireMesh = null;
-        let campfireLight = null;
-        let tentMesh = null;
-        let rainSystem = null;
-        let windShaderUniforms = [];
+        function getTerrainHeight(x, z) {
+            const distFromStream = Math.abs(x);
+            let streamValley = distFromStream < 7.5 ? -0.35 * Math.cos((distFromStream / 7.5) * (Math.PI / 2)) : 0;
+            let h = Math.sin(x * 0.035) * Math.cos(z * 0.035) * 4.2 + Math.sin(x * 0.01) * 7.5 + streamValley;
+            return h;
+        }
 
         // =========================================================================
-        // WEB AUDIO API PROCEDURAL SOUNDSCAPE
+        // MULTI-LAYERED SPATIAL WEB AUDIO SYNTHESIZER
         // =========================================================================
-        let audioCtx = null;
-        let ambientGain = null;
+        let audioCtx = null, masterGain = null;
+        let campfireSoundGain = null, riverSoundGain = null, windSoundGain = null;
+        let lastStepTime = 0;
 
         function initAudio() {
             if (audioCtx) return;
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            ambientGain = audioCtx.createGain();
-            ambientGain.gain.value = state.muted ? 0 : 0.14;
-            ambientGain.connect(audioCtx.destination);
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 1.0;
+            masterGain.connect(audioCtx.destination);
 
+            // Layer 1: Stream Water Noise Buffer
             const bufferSize = audioCtx.sampleRate * 2;
             const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
             const output = noiseBuffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                output[i] = Math.random() * 2 - 1;
-            }
+            for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
 
-            const ambientSource = audioCtx.createBufferSource();
-            ambientSource.buffer = noiseBuffer;
-            ambientSource.loop = true;
+            const whiteNoise = audioCtx.createBufferSource();
+            whiteNoise.buffer = noiseBuffer;
+            whiteNoise.loop = true;
 
             const filter = audioCtx.createBiquadFilter();
             filter.type = 'bandpass';
-            filter.frequency.value = 210;
+            filter.frequency.value = 650;
             filter.Q.value = 1.2;
 
-            ambientSource.connect(filter);
-            filter.connect(ambientGain);
-            ambientSource.start();
+            riverSoundGain = audioCtx.createGain();
+            riverSoundGain.gain.value = 0.28;
+
+            whiteNoise.connect(filter);
+            filter.connect(riverSoundGain);
+            riverSoundGain.connect(masterGain);
+            whiteNoise.start();
+
+            // Layer 2: Crackling Campfire Synthesis
+            const fireNoise = audioCtx.createBufferSource();
+            fireNoise.buffer = noiseBuffer;
+            fireNoise.loop = true;
+            const fireFilter = audioCtx.createBiquadFilter();
+            fireFilter.type = 'lowpass';
+            fireFilter.frequency.value = 320;
+            campfireSoundGain = audioCtx.createGain();
+            campfireSoundGain.gain.value = 0;
+            fireNoise.connect(fireFilter);
+            fireFilter.connect(campfireSoundGain);
+            campfireSoundGain.connect(masterGain);
+            fireNoise.start();
+        }
+
+        function updateSpatialAudio(elapsed) {
+            if (!audioCtx || state.muted) return;
+            // Scale river volume based on distance to stream (x = 0)
+            if (riverSoundGain) {
+                const distToStream = Math.abs(player.x);
+                riverSoundGain.gain.value = Math.max(0.04, 0.35 * (1.0 - Math.min(1.0, distToStream / 25.0)));
+            }
+            // Scale campfire crackle when near lit fire
+            if (campfireSoundGain && state.fireLit && campfireMesh) {
+                const distToFire = Math.hypot(player.x - campfireMesh.position.x, player.z - campfireMesh.position.z);
+                campfireSoundGain.gain.value = distToFire < 18 ? Math.max(0, 0.35 * (1.0 - distToFire / 18.0)) : 0;
+            } else if (campfireSoundGain) {
+                campfireSoundGain.gain.value = 0;
+            }
+            // Nocturnal cricket / owl cues
+            if (state.isNight && Math.random() < 0.003) {
+                playOwlHoot();
+            }
+        }
+
+        function playFootstep() {
+            if (state.muted || !audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(masterGain);
+
+            const onBridge = Math.abs(player.x) < 7.0 && Math.abs(player.z - 5) < 3.5;
+            const inWater = Math.abs(player.x) < 5.5;
+
+            if (onBridge) {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+            } else if (inWater) {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + 0.12);
+                gain.gain.setValueAtTime(0.22, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+            } else {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(95, now);
+                osc.frequency.exponentialRampToValueAtTime(35, now + 0.06);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
+            }
+            osc.start(now);
+            osc.stop(now + 0.08);
+        }
+
+        function playOwlHoot() {
+            if (state.muted || !audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(340, now);
+            osc.frequency.setValueAtTime(310, now + 0.18);
+            osc.frequency.setValueAtTime(290, now + 0.35);
+            gain.gain.setValueAtTime(0.0, now);
+            gain.gain.linearRampToValueAtTime(0.08, now + 0.1);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.55);
+            osc.connect(gain);
+            gain.connect(masterGain);
+            osc.start(now);
+            osc.stop(now + 0.55);
         }
 
         function playSound(type) {
             if (state.muted || !audioCtx) return;
             if (audioCtx.state === 'suspended') audioCtx.resume();
-
+            const now = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            const now = audioCtx.currentTime;
+            gain.connect(masterGain);
 
             if (type === 'wood') {
                 osc.type = 'triangle';
@@ -792,49 +439,39 @@
                 osc.frequency.exponentialRampToValueAtTime(42, now + 0.15);
                 gain.gain.setValueAtTime(0.28, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
-                osc.start(now);
-                osc.stop(now + 0.15);
             } else if (type === 'fire') {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(210, now);
                 osc.frequency.exponentialRampToValueAtTime(620, now + 0.3);
                 gain.gain.setValueAtTime(0.22, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
-                osc.start(now);
-                osc.stop(now + 0.3);
             } else if (type === 'drink') {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(420, now);
                 osc.frequency.exponentialRampToValueAtTime(840, now + 0.38);
                 gain.gain.setValueAtTime(0.2, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.38);
-                osc.start(now);
-                osc.stop(now + 0.38);
             } else if (type === 'forage') {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(520, now);
                 osc.frequency.exponentialRampToValueAtTime(740, now + 0.12);
                 gain.gain.setValueAtTime(0.2, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
-                osc.start(now);
-                osc.stop(now + 0.12);
             } else if (type === 'shutter') {
                 osc.type = 'square';
                 osc.frequency.setValueAtTime(850, now);
                 osc.frequency.setValueAtTime(420, now + 0.08);
                 gain.gain.setValueAtTime(0.24, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now);
-                osc.stop(now + 0.1);
             } else if (type === 'ui') {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(620, now);
                 osc.frequency.setValueAtTime(820, now + 0.05);
                 gain.gain.setValueAtTime(0.1, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now);
-                osc.stop(now + 0.1);
             }
+            osc.start(now);
+            osc.stop(now + 0.15);
         }
 
         // =========================================================================
@@ -848,11 +485,7 @@
         const startGroundY = getTerrainHeight(player.x, player.z);
         camera.position.set(player.x, startGroundY + 1.7, player.z);
 
-        const renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            powerPreference: 'high-performance',
-            preserveDrawingBuffer: true
-        });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
@@ -861,56 +494,24 @@
         renderer.toneMappingExposure = 1.05;
         container.appendChild(renderer.domElement);
 
-        // Post-Processing Composer (Bloom for Campfire & Stars + Subtle Chromatic Aberration)
         let composer = null;
-        let bloomPass = null;
         if (typeof THREE.EffectComposer !== 'undefined') {
             composer = new THREE.EffectComposer(renderer);
-            const renderPass = new THREE.RenderPass(scene, camera);
-            composer.addPass(renderPass);
+            composer.addPass(new THREE.RenderPass(scene, camera));
 
-            bloomPass = new THREE.UnrealBloomPass(
-                new THREE.Vector2(window.innerWidth, window.innerHeight),
-                0.45, // strength
-                0.65, // radius
-                0.82  // threshold (only bright flames, stars, and sunlit highlights bloom)
-            );
+            const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.45, 0.65, 0.82);
             composer.addPass(bloomPass);
 
-            // Subtle Chromatic Aberration Shader Pass
             const chromaticShader = {
-                uniforms: {
-                    tDiffuse: { value: null },
-                    amount: { value: 0.0012 }
-                },
-                vertexShader: `
-                    varying vec2 vUv;
-                    void main() {
-                        vUv = uv;
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
-                fragmentShader: `
-                    uniform sampler2D tDiffuse;
-                    uniform float amount;
-                    varying vec2 vUv;
-                    void main() {
-                        vec2 dir = vUv - vec2(0.5);
-                        float dist = length(dir);
-                        vec2 offset = dir * dist * amount;
-                        float r = texture2D(tDiffuse, vUv + offset).r;
-                        float g = texture2D(tDiffuse, vUv).g;
-                        float b = texture2D(tDiffuse, vUv - offset).b;
-                        gl_FragColor = vec4(r, g, b, 1.0);
-                    }
-                `
+                uniforms: { tDiffuse: { value: null }, amount: { value: 0.0012 } },
+                vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+                fragmentShader: `uniform sampler2D tDiffuse; uniform float amount; varying vec2 vUv; void main() { vec2 dir = vUv - vec2(0.5); float dist = length(dir); vec2 offset = dir * dist * amount; float r = texture2D(tDiffuse, vUv + offset).r; float g = texture2D(tDiffuse, vUv).g; float b = texture2D(tDiffuse, vUv - offset).b; gl_FragColor = vec4(r, g, b, 1.0); }`
             };
-            const chromaPass = new THREE.ShaderPass(chromaticShader);
-            composer.addPass(chromaPass);
+            composer.addPass(new THREE.ShaderPass(chromaticShader));
         }
 
         // =========================================================================
-        // 2. ATMOSPHERIC RAYLEIGH SKY DOME SHADER
+        // ATMOSPHERIC SKY & MOUNTAIN RIDGE RING
         // =========================================================================
         const skyUniforms = {
             topColor: { value: new THREE.Color(0x1e64b4) },
@@ -925,101 +526,69 @@
             uniforms: skyUniforms,
             side: THREE.BackSide,
             depthWrite: false,
-            vertexShader: `
-                varying vec3 vWorldPosition;
-                void main() {
-                    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                    vWorldPosition = worldPosition.xyz;
-                    gl_Position = projectionMatrix * viewMatrix * worldPosition;
-                }
-            `,
-            fragmentShader: `
-                uniform vec3 topColor;
-                uniform vec3 horizonColor;
-                uniform vec3 sunColor;
-                uniform vec3 sunDirection;
-                uniform float nightFactor;
-                varying vec3 vWorldPosition;
-
-                void main() {
-                    vec3 viewDir = normalize(vWorldPosition);
-                    float h = clamp(viewDir.y, 0.0, 1.0);
-                    // Rayleigh scattering gradient
-                    vec3 sky = mix(horizonColor, topColor, pow(h, 0.55));
-                    // Mie solar halo scattering
-                    float sunAmt = max(dot(viewDir, normalize(sunDirection)), 0.0);
-                    vec3 mieGlow = sunColor * pow(sunAmt, 12.0) * 0.45 * (1.0 - nightFactor * 0.85);
-                    vec3 sunDisc = sunColor * smoothstep(0.9975, 0.9994, sunAmt) * 2.2 * (1.0 - nightFactor);
-                    gl_FragColor = vec4(sky + mieGlow + sunDisc, 1.0);
-                }
-            `
+            vertexShader: `varying vec3 vWorldPosition; void main() { vec4 worldPosition = modelMatrix * vec4(position, 1.0); vWorldPosition = worldPosition.xyz; gl_Position = projectionMatrix * viewMatrix * worldPosition; }`,
+            fragmentShader: `uniform vec3 topColor; uniform vec3 horizonColor; uniform vec3 sunColor; uniform vec3 sunDirection; uniform float nightFactor; varying vec3 vWorldPosition; void main() { vec3 viewDir = normalize(vWorldPosition); float h = clamp(viewDir.y, 0.0, 1.0); vec3 sky = mix(horizonColor, topColor, pow(h, 0.55)); float sunAmt = max(dot(viewDir, normalize(sunDirection)), 0.0); vec3 mieGlow = sunColor * pow(sunAmt, 12.0) * 0.45 * (1.0 - nightFactor * 0.85); vec3 sunDisc = sunColor * smoothstep(0.9975, 0.9994, sunAmt) * 2.2 * (1.0 - nightFactor); gl_FragColor = vec4(sky + mieGlow + sunDisc, 1.0); }`
         });
         const skyDome = new THREE.Mesh(skyGeo, skyMat);
         scene.add(skyDome);
 
-        // Scene Lights
+        const mountainMat = new THREE.MeshStandardMaterial({ color: 0x2a3b4c, roughness: 0.95, metalness: 0.05 });
+        for (let i = 0; i < 28; i++) {
+            const angle = (i / 28) * Math.PI * 2;
+            const dist = 235 + Math.sin(i * 3.7) * 25;
+            const mx = Math.cos(angle) * dist, mz = Math.sin(angle) * dist;
+            const mHeight = 38 + Math.abs(Math.sin(i * 2.3)) * 42;
+            const mRadius = 35 + Math.abs(Math.cos(i * 1.9)) * 25;
+            const peak = new THREE.Mesh(new THREE.ConeGeometry(mRadius, mHeight, 6), mountainMat);
+            peak.position.set(mx, (mHeight * 0.42) - 4, mz);
+            peak.rotation.y = i * 0.7;
+            scene.add(peak);
+        }
+
         const hemiLight = new THREE.HemisphereLight(0xbde0fe, 0x2d3a24, 0.55);
         scene.add(hemiLight);
 
         const sunLight = new THREE.DirectionalLight(0xfff5e0, 1.35);
         sunLight.position.set(50, 80, 50);
         sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048;
-        sunLight.shadow.mapSize.height = 2048;
-        sunLight.shadow.camera.near = 0.5;
-        sunLight.shadow.camera.far = 220;
+        sunLight.shadow.mapSize.width = 2048; sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5; sunLight.shadow.camera.far = 220;
         const d = 65;
-        sunLight.shadow.camera.left = -d;
-        sunLight.shadow.camera.right = d;
-        sunLight.shadow.camera.top = d;
-        sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.camera.left = -d; sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d; sunLight.shadow.camera.bottom = -d;
         sunLight.shadow.bias = -0.0005;
         scene.add(sunLight);
 
         // =========================================================================
-        // TERRAIN WITH PBR MAPS & VERTEX AMBIENT OCCLUSION IN RIVERBED
+        // TERRAIN, PBR MATERIALS & STREAM
         // =========================================================================
         const groundPBR = generatePBRTextureSet('ground', 256);
         [groundPBR.map, groundPBR.roughnessMap, groundPBR.normalMap].forEach(t => t.repeat.set(45, 45));
 
-        const groundGeo = new THREE.PlaneGeometry(300, 300, 128, 128);
-        groundGeo.rotateX(-Math.PI / 2); // Orient directly in XZ plane so world Y == getTerrainHeight(x,z)
+        const groundGeo = new THREE.PlaneGeometry(320, 320, 128, 128);
+        groundGeo.rotateX(-Math.PI / 2);
 
         const posAttr = groundGeo.attributes.position;
         const colors = new Float32Array(posAttr.count * 3);
-
         for (let i = 0; i < posAttr.count; i++) {
-            const vx = posAttr.getX(i);
-            const vz = posAttr.getZ(i);
+            const vx = posAttr.getX(i), vz = posAttr.getZ(i);
             const vy = getTerrainHeight(vx, vz);
             posAttr.setY(i, vy);
-
-            // Ambient occlusion shading near riverbed & crevices
             const distFromStream = Math.abs(vx);
             const ao = distFromStream < 6.5 ? THREE.MathUtils.lerp(0.45, 1.0, (distFromStream - 4.0) / 2.5) : 1.0;
-            colors[i * 3] = ao;
-            colors[i * 3 + 1] = ao;
-            colors[i * 3 + 2] = ao;
+            colors[i * 3] = ao; colors[i * 3 + 1] = ao; colors[i * 3 + 2] = ao;
         }
         groundGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
         groundGeo.computeVertexNormals();
 
         const groundMat = new THREE.MeshStandardMaterial({
-            map: groundPBR.map,
-            normalMap: groundPBR.normalMap,
-            normalScale: new THREE.Vector2(1.4, 1.4),
-            roughnessMap: groundPBR.roughnessMap,
-            roughness: 0.92,
-            metalness: 0.04,
-            vertexColors: true
+            map: groundPBR.map, normalMap: groundPBR.normalMap, normalScale: new THREE.Vector2(1.4, 1.4),
+            roughnessMap: groundPBR.roughnessMap, roughness: 0.92, metalness: 0.04, vertexColors: true
         });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // =========================================================================
-        // 4. DYNAMIC VERTEX-DISPLACED WATER STREAM WITH SPECULAR RIPPLES & FOAM
-        // =========================================================================
         const waterUniforms = {
             uTime: { value: 0 },
             uSunDir: { value: new THREE.Vector3(0.4, 0.7, 0.3).normalize() },
@@ -1028,114 +597,107 @@
             uNightFactor: { value: 0.0 }
         };
 
-        const streamGeo = new THREE.PlaneGeometry(10.5, 300, 32, 160);
+        const streamGeo = new THREE.PlaneGeometry(10.5, 320, 32, 160);
         streamGeo.rotateX(-Math.PI / 2);
 
         const streamMat = new THREE.ShaderMaterial({
             uniforms: waterUniforms,
             transparent: true,
-            vertexShader: `
-                uniform float uTime;
-                varying vec2 vUv;
-                varying vec3 vWorldPos;
-                varying vec3 vNormal;
-
-                void main() {
-                    vUv = uv;
-                    vec3 pos = position;
-                    // Multi-layered traveling ripples downstream
-                    float wave1 = sin(pos.z * 0.9 + uTime * 2.4 + pos.x * 1.5) * 0.045;
-                    float wave2 = cos(pos.z * 2.1 - uTime * 3.1 - pos.x * 2.3) * 0.025;
-                    pos.y += wave1 + wave2;
-
-                    // Analytical wave normal perturbation
-                    float dWdX = cos(pos.z * 0.9 + uTime * 2.4 + pos.x * 1.5) * 0.067 - sin(pos.z * 2.1 - uTime * 3.1 - pos.x * 2.3) * 0.057;
-                    float dWdZ = cos(pos.z * 0.9 + uTime * 2.4 + pos.x * 1.5) * 0.04 - sin(pos.z * 2.1 - uTime * 3.1 - pos.x * 2.3) * 0.052;
-                    vNormal = normalize(vec3(-dWdX, 1.0, -dWdZ));
-
-                    vec4 worldPos = modelMatrix * vec4(pos, 1.0);
-                    vWorldPos = worldPos.xyz;
-                    gl_Position = projectionMatrix * viewMatrix * worldPos;
-                }
-            `,
-            fragmentShader: `
-                uniform float uTime;
-                uniform vec3 uSunDir;
-                uniform vec3 uWaterColor;
-                uniform vec3 uShallowColor;
-                uniform float uNightFactor;
-                varying vec2 vUv;
-                varying vec3 vWorldPos;
-                varying vec3 vNormal;
-
-                void main() {
-                    // Bank proximity factor (0 at center, 1 at edges)
-                    float edgeDist = abs(vUv.x - 0.5) * 2.0;
-
-                    // Micro-ripple normal detail
-                    vec3 n = normalize(vNormal + vec3(
-                        sin(vWorldPos.z * 6.0 + uTime * 4.0) * 0.08,
-                        0.0,
-                        cos(vWorldPos.x * 8.0 - uTime * 3.5) * 0.08
-                    ));
-
-                    vec3 viewDir = normalize(cameraPosition - vWorldPos);
-                    float fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 3.0);
-
-                    // Specular sun glint
-                    vec3 halfVec = normalize(normalize(uSunDir) + viewDir);
-                    float spec = pow(max(dot(n, halfVec), 0.0), 96.0) * (1.2 - uNightFactor * 0.8);
-
-                    // Soft animated shoreline foam where water meets riverbanks
-                    float foamNoise = sin(vWorldPos.z * 3.5 + uTime * 2.2) * 0.5 + 0.5;
-                    float foamMask = smoothstep(0.76 - foamNoise * 0.1, 0.98, edgeDist);
-
-                    vec3 baseCol = mix(uWaterColor, uShallowColor, fresnel * 0.65 + (1.0 - edgeDist) * 0.25);
-                    baseCol *= (1.0 - uNightFactor * 0.72);
-                    vec3 finalCol = mix(baseCol + vec3(1.0, 0.96, 0.88) * spec, vec3(0.88, 0.94, 0.98) * (1.0 - uNightFactor * 0.65), foamMask * 0.72);
-
-                    float alpha = mix(0.88, 0.35, smoothstep(0.85, 1.0, edgeDist));
-                    gl_FragColor = vec4(finalCol, alpha);
-                }
-            `
+            vertexShader: `uniform float uTime; varying vec2 vUv; varying vec3 vWorldPos; varying vec3 vNormal; void main() { vUv = uv; vec3 pos = position; float wave1 = sin(pos.z * 0.9 + uTime * 2.4 + pos.x * 1.5) * 0.045; float wave2 = cos(pos.z * 2.1 - uTime * 3.1 - pos.x * 2.3) * 0.025; pos.y += wave1 + wave2; float dWdX = cos(pos.z * 0.9 + uTime * 2.4 + pos.x * 1.5) * 0.067 - sin(pos.z * 2.1 - uTime * 3.1 - pos.x * 2.3) * 0.057; float dWdZ = cos(pos.z * 0.9 + uTime * 2.4 + pos.x * 1.5) * 0.04 - sin(pos.z * 2.1 - uTime * 3.1 - pos.x * 2.3) * 0.052; vNormal = normalize(vec3(-dWdX, 1.0, -dWdZ)); vec4 worldPos = modelMatrix * vec4(pos, 1.0); vWorldPos = worldPos.xyz; gl_Position = projectionMatrix * viewMatrix * worldPos; }`,
+            fragmentShader: `uniform float uTime; uniform vec3 uSunDir; uniform vec3 uWaterColor; uniform vec3 uShallowColor; uniform float uNightFactor; varying vec2 vUv; varying vec3 vWorldPos; varying vec3 vNormal; void main() { float edgeDist = abs(vUv.x - 0.5) * 2.0; vec3 n = normalize(vNormal + vec3(sin(vWorldPos.z * 6.0 + uTime * 4.0) * 0.08, 0.0, cos(vWorldPos.x * 8.0 - uTime * 3.5) * 0.08)); vec3 viewDir = normalize(cameraPosition - vWorldPos); float fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 3.0); vec3 halfVec = normalize(normalize(uSunDir) + viewDir); float spec = pow(max(dot(n, halfVec), 0.0), 96.0) * (1.2 - uNightFactor * 0.8); float foamNoise = sin(vWorldPos.z * 3.5 + uTime * 2.2) * 0.5 + 0.5; float foamMask = smoothstep(0.76 - foamNoise * 0.1, 0.98, edgeDist); vec3 baseCol = mix(uWaterColor, uShallowColor, fresnel * 0.65 + (1.0 - edgeDist) * 0.25); baseCol *= (1.0 - uNightFactor * 0.72); vec3 finalCol = mix(baseCol + vec3(1.0, 0.96, 0.88) * spec, vec3(0.88, 0.94, 0.98) * (1.0 - uNightFactor * 0.65), foamMask * 0.72); float alpha = mix(0.88, 0.35, smoothstep(0.85, 1.0, edgeDist)); gl_FragColor = vec4(finalCol, alpha); }`
         });
         const stream = new THREE.Mesh(streamGeo, streamMat);
         stream.position.set(0, -0.32, 0);
         scene.add(stream);
 
-        // Wooden Bridge grounded firmly on both banks
-        const bridgeGroup = new THREE.Group();
         const barkPBR = generatePBRTextureSet('bark', 256);
         const stonePBR = generatePBRTextureSet('stone', 256);
+        const plankMat = new THREE.MeshStandardMaterial({ map: barkPBR.map, normalMap: barkPBR.normalMap, roughnessMap: barkPBR.roughnessMap, roughness: 0.85 });
+        const stoneMat = new THREE.MeshStandardMaterial({ map: stonePBR.map, normalMap: stonePBR.normalMap, normalScale: new THREE.Vector2(1.3, 1.3), roughnessMap: stonePBR.roughnessMap, roughness: 0.88 });
 
-        const plankMat = new THREE.MeshStandardMaterial({
-            map: barkPBR.map,
-            normalMap: barkPBR.normalMap,
-            roughnessMap: barkPBR.roughnessMap,
-            roughness: 0.85
-        });
+        // Wooden Bridge
+        const bridgeGroup = new THREE.Group();
         for (let i = -3; i <= 3; i++) {
             const plank = new THREE.Mesh(new THREE.BoxGeometry(13.5, 0.22, 0.85), plankMat);
             plank.position.set(0, 0.12, i * 0.95);
-            plank.castShadow = true;
-            plank.receiveShadow = true;
+            plank.castShadow = true; plank.receiveShadow = true;
             bridgeGroup.add(plank);
         }
         bridgeGroup.position.set(0, getTerrainHeight(7.0, 5), 5);
         scene.add(bridgeGroup);
 
         // =========================================================================
-        // 3. VERTEX-SHADER WIND & FOLIAGE ANIMATION + GROUNDED TREES & GRASS
+        // EXPLORATION LANDMARKS & LOST JOURNAL PAGES
+        // =========================================================================
+        const landmarks = [
+            { name: "Ancient Standing Stones", x: 52, z: -42, pageTitle: "Page I — The Solstice Ring", pageText: "Whoever raised these granite monoliths aligned the northern gap directly with Polaris. On clear nights, the stones hum softly in the mountain breeze." },
+            { name: "Abandoned Ranger Lookout", x: -45, z: -55, pageTitle: "Page II — Watchman’s Log", pageText: "Day 42: The deer come down to the stream bend just after dawn. If you sit quietly on a bench without sprinting, they will walk within ten paces." },
+            { name: "Mossy Forest Cairn Shrine", x: -48, z: 48, pageTitle: "Page III — Herbalist’s Note", pageText: "Steeping wild mint in boiling stream water restores weary legs, while golden chanterelles grow richest beneath the oldest pines." }
+        ];
+
+        function buildLandmarks() {
+            // Standing Stones
+            const circleGroup = new THREE.Group();
+            const cy = getTerrainHeight(52, -42);
+            for (let i = 0; i < 8; i++) {
+                const ang = (i / 8) * Math.PI * 2;
+                const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.1, 4.2 + (i % 2) * 0.8, 0.85), stoneMat);
+                pillar.position.set(Math.cos(ang) * 5.2, 1.9, Math.sin(ang) * 5.2);
+                pillar.rotation.y = -ang; pillar.castShadow = true;
+                circleGroup.add(pillar);
+            }
+            circleGroup.position.set(52, cy, -42);
+            scene.add(circleGroup);
+
+            // Watchtower
+            const towerGroup = new THREE.Group();
+            const ty = getTerrainHeight(-45, -55);
+            [[-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6], [1.6, 1.6]].forEach(([px, pz]) => {
+                const post = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 7.5, 6), plankMat);
+                post.position.set(px, 3.6, pz); post.castShadow = true; towerGroup.add(post);
+            });
+            const deck = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.25, 4.2), plankMat);
+            deck.position.y = 5.2; deck.castShadow = true; towerGroup.add(deck);
+            const roof = new THREE.Mesh(new THREE.ConeGeometry(3.3, 2.0, 4), plankMat);
+            roof.position.y = 8.2; roof.rotation.y = Math.PI / 4; towerGroup.add(roof);
+            towerGroup.position.set(-45, ty, -55);
+            scene.add(towerGroup);
+
+            // Cairn Shrine
+            const shrineGroup = new THREE.Group();
+            const sy = getTerrainHeight(-48, 48);
+            for (let tier = 0; tier < 4; tier++) {
+                const rad = 1.6 - tier * 0.32;
+                const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(rad, 1), stoneMat);
+                stone.scale.y = 0.55; stone.position.y = tier * 0.65 + 0.3; stone.castShadow = true;
+                shrineGroup.add(stone);
+            }
+            shrineGroup.position.set(-48, sy, 48);
+            scene.add(shrineGroup);
+
+            // Collectible Pages
+            landmarks.forEach((lm, idx) => {
+                const py = getTerrainHeight(lm.x, lm.z);
+                const pageMesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.45, 0.04, 0.6),
+                    new THREE.MeshBasicMaterial({ color: new THREE.Color(1.8, 1.6, 0.9) })
+                );
+                pageMesh.position.set(lm.x, py + 0.35, lm.z);
+                pageMesh.rotation.y = idx * 0.8;
+                scene.add(pageMesh);
+                interactables.push({ type: 'page', mesh: pageMesh, x: lm.x, z: lm.z, active: true, pageData: lm });
+            });
+        }
+        buildLandmarks();
+
+        // =========================================================================
+        // WIND SHADER, TREES, GRASS & FORAGEABLES
         // =========================================================================
         function applyWindShader(material, swayStrength = 0.25) {
             material.onBeforeCompile = (shader) => {
                 shader.uniforms.uWindTime = { value: 0 };
                 windShaderUniforms.push(shader.uniforms.uWindTime);
-
-                shader.vertexShader = `
-                    uniform float uWindTime;
-                ` + shader.vertexShader;
-
+                shader.vertexShader = `uniform float uWindTime;\n` + shader.vertexShader;
                 shader.vertexShader = shader.vertexShader.replace(
                     '#include <begin_vertex>',
                     `
@@ -1149,20 +711,13 @@
                 );
             };
         }
-
-        const foliageMat = new THREE.MeshStandardMaterial({
-            color: 0x264620,
-            roughness: 0.82,
-            metalness: 0.02
-        });
+        const windShaderUniforms = [];
+        const foliageMat = new THREE.MeshStandardMaterial({ color: 0x264620, roughness: 0.82 });
         applyWindShader(foliageMat, 0.32);
 
         const trunkMat = new THREE.MeshStandardMaterial({
-            map: barkPBR.map,
-            normalMap: barkPBR.normalMap,
-            normalScale: new THREE.Vector2(1.5, 1.5),
-            roughnessMap: barkPBR.roughnessMap,
-            roughness: 0.9
+            map: barkPBR.map, normalMap: barkPBR.normalMap, normalScale: new THREE.Vector2(1.5, 1.5),
+            roughnessMap: barkPBR.roughnessMap, roughness: 0.9
         });
 
         function createPineTree(x, z) {
@@ -1170,47 +725,31 @@
             const group = new THREE.Group();
             const height = 8.5 + Math.random() * 6.5;
 
-            // Sink trunk 0.35 units into terrain so roots never float on slopes
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.72, height + 0.4, 7), trunkMat);
-            trunk.position.y = (height * 0.5) - 0.2;
-            trunk.castShadow = true;
-            trunk.receiveShadow = true;
+            trunk.position.y = (height * 0.5) - 0.2; trunk.castShadow = true; trunk.receiveShadow = true;
             group.add(trunk);
 
-            // Ground ambient occlusion root collar shadow
-            const aoDisc = new THREE.Mesh(
-                new THREE.CircleGeometry(1.4, 12),
-                new THREE.MeshBasicMaterial({ color: 0x091107, transparent: true, opacity: 0.35, depthWrite: false })
-            );
-            aoDisc.rotation.x = -Math.PI / 2;
-            aoDisc.position.y = 0.03;
-            group.add(aoDisc);
-
-            const tiers = 4;
-            for (let i = 0; i < tiers; i++) {
+            for (let i = 0; i < 4; i++) {
                 const tierY = (height * 0.38) + (i * height * 0.18);
                 const radius = (3.4 - (i * 0.68)) * (0.85 + Math.random() * 0.35);
                 const cone = new THREE.Mesh(new THREE.ConeGeometry(radius, height * 0.36, 7), foliageMat);
-                cone.position.y = tierY;
-                cone.castShadow = true;
-                cone.receiveShadow = true;
+                cone.position.y = tierY; cone.castShadow = true; cone.receiveShadow = true;
                 group.add(cone);
             }
-
             group.position.set(x, groundY, z);
             scene.add(group);
             trees.push({ x, z, radius: 1.2 });
         }
 
-        for (let i = 0; i < 155; i++) {
-            const x = (Math.random() - 0.5) * 260;
-            const z = (Math.random() - 0.5) * 260;
-            if (Math.abs(x) > 8.5 && (Math.abs(x - player.x) > 5 || Math.abs(z - player.z) > 5)) {
+        for (let i = 0; i < 150; i++) {
+            const x = (Math.random() - 0.5) * 260, z = (Math.random() - 0.5) * 260;
+            const nearLandmark = landmarks.some(l => Math.hypot(x - l.x, z - l.z) < 9);
+            if (Math.abs(x) > 8.5 && !nearLandmark && (Math.abs(x - player.x) > 5 || Math.abs(z - player.z) > 5)) {
                 createPineTree(x, z);
             }
         }
 
-        // Instanced Swaying Forest Grass Tufts (60fps GPU Instancing)
+        // Instanced Grass
         const grassCount = 2400;
         const grassGeo = new THREE.ConeGeometry(0.14, 0.65, 3);
         grassGeo.translate(0, 0.32, 0);
@@ -1221,9 +760,8 @@
         const dummy = new THREE.Object3D();
         let gIdx = 0;
         for (let i = 0; i < grassCount; i++) {
-            const gx = (Math.random() - 0.5) * 180;
-            const gz = (Math.random() - 0.5) * 180;
-            if (Math.abs(gx) < 6.2) continue; // Keep out of stream water
+            const gx = (Math.random() - 0.5) * 180, gz = (Math.random() - 0.5) * 180;
+            if (Math.abs(gx) < 6.2) continue;
             const gy = getTerrainHeight(gx, gz);
             dummy.position.set(gx, gy - 0.05, gz);
             dummy.rotation.y = Math.random() * Math.PI * 2;
@@ -1235,29 +773,16 @@
         grassInstanced.count = gIdx;
         scene.add(grassInstanced);
 
-        // =========================================================================
-        // GROUNDED WOOD LOGS, BOULDERS & REALISTIC 3D HERBS/BERRIES
-        // =========================================================================
-        const stoneMat = new THREE.MeshStandardMaterial({
-            map: stonePBR.map,
-            normalMap: stonePBR.normalMap,
-            normalScale: new THREE.Vector2(1.3, 1.3),
-            roughnessMap: stonePBR.roughnessMap,
-            roughness: 0.88
-        });
-
-        // Scatter grounded mossy boulders
-        for (let i = 0; i < 45; i++) {
-            const rx = (Math.random() - 0.5) * 160;
-            const rz = (Math.random() - 0.5) * 160;
+        // Boulders & Logs
+        for (let i = 0; i < 40; i++) {
+            const rx = (Math.random() - 0.5) * 160, rz = (Math.random() - 0.5) * 160;
             if (Math.abs(rx) < 5.5) continue;
             const ry = getTerrainHeight(rx, rz);
             const scale = 0.6 + Math.random() * 1.1;
             const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(scale, 1), stoneMat);
-            rock.position.set(rx, ry + scale * 0.35, rz); // Embedded firmly into soil
+            rock.position.set(rx, ry + scale * 0.35, rz);
             rock.rotation.set(Math.random(), Math.random(), Math.random());
-            rock.castShadow = true;
-            rock.receiveShadow = true;
+            rock.castShadow = true; rock.receiveShadow = true;
             scene.add(rock);
         }
 
@@ -1265,80 +790,80 @@
         function spawnWoodLog(x, z) {
             const groundY = getTerrainHeight(x, z);
             const log = new THREE.Mesh(logGeo, trunkMat);
-            log.rotation.z = Math.PI / 2;
-            log.rotation.y = Math.random() * Math.PI;
-            log.position.set(x, groundY + 0.14, z); // Seated directly on terrain height
-            log.castShadow = true;
-            log.receiveShadow = true;
+            log.rotation.z = Math.PI / 2; log.rotation.y = Math.random() * Math.PI;
+            log.position.set(x, groundY + 0.14, z); log.castShadow = true;
             scene.add(log);
             interactables.push({ type: 'wood', mesh: log, x, z, active: true });
         }
-
         for (let i = 0; i < 32; i++) {
-            const x = (Math.random() - 0.5) * 120;
-            const z = (Math.random() - 0.5) * 120;
+            const x = (Math.random() - 0.5) * 120, z = (Math.random() - 0.5) * 120;
             if (Math.abs(x) > 7.5) spawnWoodLog(x, z);
         }
 
-        // Realistic 3D Herbs & Berries with Wind Sway
+        // Flora Templates
         const herbLeafMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.75 });
         applyWindShader(herbLeafMat, 0.5);
 
         const herbTemplates = [
             {
-                name: "Wild Mint Herb",
-                desc: "Aromatic mint leaves harvested from damp forest moss. Brews into invigorating tea.",
-                type: 'herb',
+                name: "Wild Mint Herb", desc: "Aromatic Mentha leaves growing in damp moss. Steep in boiling water for invigorating tea.", type: 'herb',
                 createMesh: () => {
                     const group = new THREE.Group();
                     for (let i = 0; i < 6; i++) {
                         const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.42, 4), herbLeafMat);
                         leaf.position.set((Math.random() - 0.5) * 0.28, 0.18, (Math.random() - 0.5) * 0.28);
-                        leaf.rotation.z = (Math.random() - 0.5) * 0.7;
-                        leaf.castShadow = true;
-                        group.add(leaf);
+                        leaf.rotation.z = (Math.random() - 0.5) * 0.7; group.add(leaf);
                     }
                     return group;
                 }
             },
             {
-                name: "Healing Chamomile",
-                desc: "Delicate white petals with yellow center. Soothes fatigue and restores calm.",
-                type: 'herb',
+                name: "Healing Chamomile", desc: "Delicate white petals with golden centers. Calms fatigue and restores endurance.", type: 'herb',
                 createMesh: () => {
                     const group = new THREE.Group();
                     const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.32, 4), herbLeafMat);
-                    stem.position.y = 0.16;
-                    group.add(stem);
+                    stem.position.y = 0.16; group.add(stem);
                     const center = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), new THREE.MeshStandardMaterial({ color: 0xeab308 }));
-                    center.position.y = 0.32;
-                    group.add(center);
+                    center.position.y = 0.32; group.add(center);
                     const petalMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc });
                     for (let i = 0; i < 6; i++) {
                         const angle = (i / 6) * Math.PI * 2;
                         const petal = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.05), petalMat);
                         petal.position.set(Math.cos(angle) * 0.14, 0.32, Math.sin(angle) * 0.14);
-                        petal.rotation.y = -angle;
-                        group.add(petal);
+                        petal.rotation.y = -angle; group.add(petal);
                     }
                     return group;
                 }
             },
             {
-                name: "Forest Blueberries",
-                desc: "Plump wild berries rich in natural sugars. Instantly restores stamina.",
-                type: 'berry',
+                name: "Forest Blueberries", desc: "Plump Vaccinium berries rich in antioxidants. Eat raw for an instant stamina burst.", type: 'berry',
                 createMesh: () => {
                     const group = new THREE.Group();
                     const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(0.28, 1), herbLeafMat);
-                    bush.position.y = 0.18;
-                    bush.castShadow = true;
-                    group.add(bush);
+                    bush.position.y = 0.18; group.add(bush);
                     const berryMat = new THREE.MeshStandardMaterial({ color: 0x4f46e5, roughness: 0.3 });
                     for (let i = 0; i < 5; i++) {
                         const berry = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), berryMat);
                         berry.position.set((Math.random() - 0.5) * 0.28, 0.32 + Math.random() * 0.08, (Math.random() - 0.5) * 0.28);
                         group.add(berry);
+                    }
+                    return group;
+                }
+            },
+            {
+                name: "Golden Chanterelle", desc: "Prized apricot-scented woodland mushroom. Roast over campfire embers for a hearty meal.", type: 'mushroom',
+                createMesh: () => {
+                    const group = new THREE.Group();
+                    const mushMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.6 });
+                    for (let i = 0; i < 3; i++) {
+                        const m = new THREE.Group();
+                        const stipe = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.24, 6), mushMat);
+                        stipe.position.y = 0.12;
+                        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.12, 7), mushMat);
+                        cap.rotation.x = Math.PI; cap.position.y = 0.25;
+                        m.add(stipe, cap);
+                        m.position.set((Math.random() - 0.5) * 0.25, 0, (Math.random() - 0.5) * 0.25);
+                        group.add(m);
                     }
                     return group;
                 }
@@ -1349,36 +874,116 @@
             const groundY = getTerrainHeight(x, z);
             const template = herbTemplates[Math.floor(Math.random() * herbTemplates.length)];
             const mesh = template.createMesh();
-            mesh.position.set(x, groundY - 0.03, z); // Seated firmly into terrain
+            mesh.position.set(x, groundY - 0.03, z);
             scene.add(mesh);
-            interactables.push({
-                type: 'forage',
-                mesh: mesh,
-                x: x,
-                z: z,
-                active: true,
-                itemData: { name: template.name, desc: template.desc, type: template.type }
-            });
+            interactables.push({ type: 'forage', mesh, x, z, active: true, itemData: { name: template.name, desc: template.desc, type: template.type } });
         }
-
-        for (let i = 0; i < 30; i++) {
-            const x = (Math.random() - 0.5) * 130;
-            const z = (Math.random() - 0.5) * 130;
+        for (let i = 0; i < 36; i++) {
+            const x = (Math.random() - 0.5) * 135, z = (Math.random() - 0.5) * 135;
             if (Math.abs(x) > 7.5) spawnForageable(x, z);
         }
 
         // =========================================================================
-        // STARRY SKY & CONSTELLATIONS
+        // PROCEDURAL WILDLIFE & FIREFLIES
+        // =========================================================================
+        function createDeerMesh() {
+            const group = new THREE.Group();
+            const furMat = new THREE.MeshStandardMaterial({ color: 0x9a6b43, roughness: 0.85 });
+            const antlerMat = new THREE.MeshStandardMaterial({ color: 0xe2d5c1, roughness: 0.7 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.7, 1.35), furMat);
+            body.position.y = 1.05; body.castShadow = true; group.add(body);
+            const neck = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.65, 0.32), furMat);
+            neck.position.set(0, 1.5, 0.55); neck.rotation.x = 0.25; group.add(neck);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.3, 0.48), furMat);
+            head.position.set(0, 1.82, 0.72); group.add(head);
+            [-0.12, 0.12].forEach(ax => {
+                const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.45, 4), antlerMat);
+                ant.position.set(ax, 2.12, 0.65); ant.rotation.z = ax * 1.5; group.add(ant);
+            });
+            [[-0.22, 0.45], [0.22, 0.45], [-0.22, -0.45], [0.22, -0.45]].forEach(([lx, lz]) => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.8, 5), furMat);
+                leg.position.set(lx, 0.4, lz); group.add(leg);
+            });
+            return group;
+        }
+
+        function createFoxMesh() {
+            const group = new THREE.Group();
+            const orangeMat = new THREE.MeshStandardMaterial({ color: 0xd95f18, roughness: 0.8 });
+            const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.8 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.38, 0.85), orangeMat);
+            body.position.y = 0.48; body.castShadow = true; group.add(body);
+            const head = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.42, 5), orangeMat);
+            head.rotation.x = Math.PI / 2; head.position.set(0, 0.65, 0.55); group.add(head);
+            const tail = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.65, 5), orangeMat);
+            tail.rotation.x = -Math.PI / 2.6; tail.position.set(0, 0.52, -0.62); group.add(tail);
+            const tailTip = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.22, 5), whiteMat);
+            tailTip.rotation.x = -Math.PI / 2.6; tailTip.position.set(0, 0.42, -0.88); group.add(tailTip);
+            [[-0.13, 0.28], [0.13, 0.28], [-0.13, -0.28], [0.13, -0.28]].forEach(([lx, lz]) => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.03, 0.35, 4), orangeMat);
+                leg.position.set(lx, 0.18, lz); group.add(leg);
+            });
+            return group;
+        }
+
+        function createOwlMesh() {
+            const group = new THREE.Group();
+            const featherMat = new THREE.MeshStandardMaterial({ color: 0xd6cfc2, roughness: 0.85 });
+            const eyeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.8, 0.3) });
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.48, 7), featherMat);
+            body.position.y = 0.25; group.add(body);
+            [-0.07, 0.07].forEach(ex => {
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), eyeMat);
+                eye.position.set(ex, 0.38, 0.16); group.add(eye);
+            });
+            return group;
+        }
+
+        function spawnWildlife() {
+            [[-14, 15], [16, -22], [-18, -35]].forEach(([dx, dz]) => {
+                const mesh = createDeerMesh();
+                mesh.position.set(dx, getTerrainHeight(dx, dz), dz);
+                scene.add(mesh);
+                wildlifeEntities.push({ species: "Forest Deer", mesh, x: dx, z: dz, dir: Math.random() * Math.PI * 2, stateTimer: 2 + Math.random() * 4, fleeing: false });
+            });
+            [[24, 18], [-26, 28]].forEach(([fx, fz]) => {
+                const mesh = createFoxMesh();
+                mesh.position.set(fx, getTerrainHeight(fx, fz), fz);
+                scene.add(mesh);
+                wildlifeEntities.push({ species: "Red Fox", mesh, x: fx, z: fz, dir: Math.random() * Math.PI * 2, stateTimer: 1 + Math.random() * 3, fleeing: false });
+            });
+            [[14, -8], [-15, 36]].forEach(([ox, oz]) => {
+                const oy = getTerrainHeight(ox, oz);
+                const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.55, 1.4, 7), trunkMat);
+                stump.position.set(ox, oy + 0.65, oz); stump.castShadow = true; scene.add(stump);
+                const mesh = createOwlMesh();
+                mesh.position.set(ox, oy + 1.35, oz); scene.add(mesh);
+                wildlifeEntities.push({ species: "Barn Owl", mesh, x: ox, z: oz, stationary: true });
+            });
+
+            // Fireflies
+            const ffGeo = new THREE.BufferGeometry();
+            const ffCount = 90, ffPos = new Float32Array(ffCount * 3);
+            for (let i = 0; i < ffCount; i++) {
+                ffPos[i * 3] = (Math.random() - 0.5) * 24;
+                ffPos[i * 3 + 1] = 0.6 + Math.random() * 2.5;
+                ffPos[i * 3 + 2] = (Math.random() - 0.5) * 120;
+            }
+            ffGeo.setAttribute('position', new THREE.BufferAttribute(ffPos, 3));
+            const ffMat = new THREE.PointsMaterial({ color: new THREE.Color(1.4, 2.4, 0.5), size: 0.25, transparent: true, opacity: 0 });
+            firefliesPoints = new THREE.Points(ffGeo, ffMat);
+            scene.add(firefliesPoints);
+        }
+        spawnWildlife();
+
+        // =========================================================================
+        // CONSTELLATIONS & CELESTIAL TRACING
         // =========================================================================
         const starsGeo = new THREE.BufferGeometry();
-        const starCount = 2000;
-        const starPos = [];
+        const starCount = 2000, starPos = [];
         for (let i = 0; i < starCount; i++) {
-            const u = Math.random();
-            const v = Math.random();
-            const theta = u * 2.0 * Math.PI;
-            const phi = Math.acos(2.0 * v - 1.0);
-            const r = 450;
+            const u = Math.random(), v = Math.random();
+            const theta = u * 2.0 * Math.PI, phi = Math.acos(2.0 * v - 1.0), r = 450;
             starPos.push(r * Math.sin(phi) * Math.cos(theta), Math.abs(r * Math.cos(phi)) + 20, r * Math.sin(phi) * Math.sin(theta));
         }
         starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
@@ -1387,31 +992,38 @@
         scene.add(starsGroup);
 
         const constellationsData = [
-            { name: "Orion the Hunter", pos: new THREE.Vector3(120, 260, -300), desc: "Dominant celestial constellation featuring Rigel and Betelgeuse, ancient symbol of the celestial hunter." },
-            { name: "Ursa Major", pos: new THREE.Vector3(-180, 290, 200), desc: "The Great Bear containing the Big Dipper asterism, pointing steadfastly toward Polaris." },
-            { name: "Cassiopeia", pos: new THREE.Vector3(200, 310, 150), desc: "Distinctive 'W' shaped northern constellation representing the mythological queen." }
+            { name: "Orion", desc: "The Celestial Hunter — traced through Betelgeuse, Bellatrix, Belt stars, and Rigel.", points: [new THREE.Vector3(95, 290, -280), new THREE.Vector3(135, 285, -270), new THREE.Vector3(122, 250, -285), new THREE.Vector3(114, 248, -288), new THREE.Vector3(106, 246, -291), new THREE.Vector3(92, 210, -295), new THREE.Vector3(138, 212, -285)] },
+            { name: "Ursa Major", desc: "The Great Bear & Big Dipper — pointing steadfastly toward Polaris.", points: [new THREE.Vector3(-210, 270, 180), new THREE.Vector3(-185, 285, 195), new THREE.Vector3(-162, 280, 210), new THREE.Vector3(-140, 265, 218), new THREE.Vector3(-135, 240, 225), new THREE.Vector3(-105, 245, 232), new THREE.Vector3(-108, 272, 222)] },
+            { name: "Cassiopeia", desc: "The Queen’s Throne — an unmistakable 'W' in the northern autumn sky.", points: [new THREE.Vector3(170, 310, 140), new THREE.Vector3(190, 285, 155), new THREE.Vector3(212, 305, 165), new THREE.Vector3(232, 282, 175), new THREE.Vector3(252, 312, 182)] },
+            { name: "Lyra", desc: "The Celestial Harp — anchored by Vega, one of the brightest blue-white stars.", points: [new THREE.Vector3(-40, 340, -180), new THREE.Vector3(-55, 318, -195), new THREE.Vector3(-32, 315, -198), new THREE.Vector3(-38, 290, -210), new THREE.Vector3(-62, 292, -206)] }
         ];
 
         constellationsGroup = new THREE.Group();
-        const constellationNodeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, fog: false });
-        const constellations = [];
+        const starNodeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, fog: false });
+        const starTracedMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, fog: false });
 
-        constellationsData.forEach(data => {
-            const mesh = new THREE.Mesh(new THREE.SphereGeometry(7, 16, 16), constellationNodeMat);
-            mesh.position.copy(data.pos);
-            constellationsGroup.add(mesh);
-            constellations.push({ mesh, name: data.name, desc: data.desc });
+        constellationsData.forEach(cData => {
+            const cEntry = { name: cData.name, desc: cData.desc, nodes: [], tracedCount: 0, completed: false, line: null };
+            cData.points.forEach((pt, idx) => {
+                const node = new THREE.Mesh(new THREE.SphereGeometry(5.2, 12, 12), starNodeMat.clone());
+                node.position.copy(pt);
+                node.userData = { constellation: cEntry, starIndex: idx };
+                constellationsGroup.add(node);
+                cEntry.nodes.push(node);
+            });
+            const lineGeo = new THREE.BufferGeometry().setFromPoints(cData.points);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.0, fog: false });
+            const line = new THREE.Line(lineGeo, lineMat);
+            constellationsGroup.add(line);
+            cEntry.line = line;
+            constellationObjects.push(cEntry);
         });
         scene.add(constellationsGroup);
         constellationsGroup.visible = false;
 
-        // Weather Rain Particles
         const rainGeo = new THREE.BufferGeometry();
-        const rainCount = 2200;
-        const rainPos = [];
-        for (let i = 0; i < rainCount; i++) {
-            rainPos.push((Math.random() - 0.5) * 120, Math.random() * 60, (Math.random() - 0.5) * 120);
-        }
+        const rainCount = 2200, rainPos = [];
+        for (let i = 0; i < rainCount; i++) rainPos.push((Math.random() - 0.5) * 120, Math.random() * 60, (Math.random() - 0.5) * 120);
         rainGeo.setAttribute('position', new THREE.Float32BufferAttribute(rainPos, 3));
         const rainMat = new THREE.PointsMaterial({ color: 0xa5b4fc, size: 0.65, transparent: true, opacity: 0.75 });
         rainSystem = new THREE.Points(rainGeo, rainMat);
@@ -1419,9 +1031,9 @@
         scene.add(rainSystem);
 
         // =========================================================================
-        // INPUT HANDLING (KEYBOARD, MOUSE LOCK & MOBILE TOUCH)
+        // INPUT HANDLING & CONTROLS
         // =========================================================================
-        const keys = { w: false, a: false, s: false, d: false, shift: false, e: false };
+        const keys = { w: false, a: false, s: false, d: false, shift: false };
         let isPointerLocked = false;
 
         window.addEventListener('keydown', (e) => {
@@ -1431,7 +1043,10 @@
             if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
             if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { keys.shift = true; state.isRunning = true; }
             if (e.code === 'KeyE') handleInteraction();
+            if (e.code === 'KeyX') dismantleNearestStructure();
             if (e.code === 'KeyC') takePhoto();
+            if (e.code === 'KeyB') toggleBinoculars();
+            if (e.code === 'KeyJ') toggleJournal();
         });
 
         window.addEventListener('keyup', (e) => {
@@ -1443,7 +1058,8 @@
         });
 
         renderer.domElement.addEventListener('click', () => {
-            if (!state.gameStarted || state.inTent) return;
+            if (!state.gameStarted || state.inTent || state.sittingBench) return;
+            if (state.activity) { resolveActivity(); return; }
             renderer.domElement.requestPointerLock();
         });
 
@@ -1453,17 +1069,15 @@
 
         window.addEventListener('mousemove', (e) => {
             if (!isPointerLocked || !state.gameStarted || state.inTent) return;
-            const sensitivity = 0.002;
+            const sensitivity = state.binocularsActive ? 0.0008 : 0.002;
             player.rotY -= e.movementX * sensitivity;
             player.pitch -= e.movementY * sensitivity;
             player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
         });
 
-        // Mobile Virtual Joystick & Touch Look
-        let touchId = null;
-        let touchStartPos = { x: 0, y: 0 };
-        const joystick = document.getElementById('touch-joystick');
-        const thumb = document.getElementById('touch-thumb');
+        // Mobile Virtual Joystick
+        let touchId = null, touchStartPos = { x: 0, y: 0 };
+        const joystick = document.getElementById('touch-joystick'), thumb = document.getElementById('touch-thumb');
 
         joystick.addEventListener('touchstart', (e) => {
             const touch = e.changedTouches[0];
@@ -1476,15 +1090,10 @@
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
                 if (touch.identifier === touchId) {
-                    const dx = touch.clientX - touchStartPos.x;
-                    const dy = touch.clientY - touchStartPos.y;
-                    const dist = Math.min(45, Math.hypot(dx, dy));
-                    const angle = Math.atan2(dy, dx);
+                    const dx = touch.clientX - touchStartPos.x, dy = touch.clientY - touchStartPos.y;
+                    const dist = Math.min(40, Math.hypot(dx, dy)), angle = Math.atan2(dy, dx);
                     thumb.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
-                    keys.w = dy < -15;
-                    keys.s = dy > 15;
-                    keys.a = dx < -15;
-                    keys.d = dx > 15;
+                    keys.w = dy < -15; keys.s = dy > 15; keys.a = dx < -15; keys.d = dx > 15;
                 }
             }
         });
@@ -1492,8 +1101,7 @@
         joystick.addEventListener('touchend', (e) => {
             for (let i = 0; i < e.changedTouches.length; i++) {
                 if (e.changedTouches[i].identifier === touchId) {
-                    touchId = null;
-                    thumb.style.transform = `translate(0px, 0px)`;
+                    touchId = null; thumb.style.transform = `translate(0px, 0px)`;
                     keys.w = keys.s = keys.a = keys.d = false;
                 }
             }
@@ -1502,147 +1110,264 @@
         let lastTouchX = 0, lastTouchY = 0;
         renderer.domElement.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1 && !e.target.closest('#mobile-controls') && !state.inTent) {
-                lastTouchX = e.touches[0].clientX;
-                lastTouchY = e.touches[0].clientY;
+                lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY;
             }
         });
         renderer.domElement.addEventListener('touchmove', (e) => {
             if (e.touches.length === 1 && !e.target.closest('#mobile-controls') && !state.inTent) {
-                const dx = e.touches[0].clientX - lastTouchX;
-                const dy = e.touches[0].clientY - lastTouchY;
-                player.rotY -= dx * 0.005;
-                player.pitch -= dy * 0.005;
+                const dx = e.touches[0].clientX - lastTouchX, dy = e.touches[0].clientY - lastTouchY;
+                const sens = state.binocularsActive ? 0.002 : 0.005;
+                player.rotY -= dx * sens; player.pitch -= dy * sens;
                 player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
-                lastTouchX = e.touches[0].clientX;
-                lastTouchY = e.touches[0].clientY;
+                lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY;
             }
         });
 
         // =========================================================================
-        // INTERACTION, GROUNDED PLACEMENT & SURVIVAL SYSTEM
+        // MICRO-GAMES & INTERACTION SYSTEMS
         // =========================================================================
+        function startActivity(type) {
+            state.activity = { type, progress: 0, dir: 1 };
+            document.getElementById('activity-label').innerText = type === 'fishing' ? "Fishing — Press [E] in Green Zone!" : "Roasting — Press [E] in Green Zone!";
+            document.getElementById('activity-bar-container').style.display = 'block';
+        }
+
+        function resolveActivity() {
+            if (!state.activity) return;
+            const { type, progress } = state.activity;
+            const inSweetSpot = progress >= 65 && progress <= 87;
+            document.getElementById('activity-bar-container').style.display = 'none';
+            state.activity = null;
+
+            if (type === 'fishing') {
+                if (inSweetSpot) {
+                    state.rawFishCount++;
+                    playSound('drink');
+                    showNotification("🐟 Caught a fresh Mountain Brook Trout! Roast it over your campfire.");
+                } else {
+                    playSound('ui');
+                    showNotification("The trout slipped off the hook! Time your click in the green zone.");
+                }
+            } else if (type === 'roasting') {
+                if (inSweetSpot) {
+                    state.cookedFoodCount++;
+                    state.stamina = Math.min(100, state.stamina + 50);
+                    playSound('fire');
+                    showNotification("🔥 Perfectly roasted over embers! Restored +50% stamina.");
+                } else {
+                    state.stamina = Math.min(100, state.stamina + 20);
+                    playSound('wood');
+                    showNotification("Slightly charred meal. Restored +20% stamina.");
+                }
+            }
+            updateHUD();
+        }
+
         function handleInteraction() {
+            if (state.activity) { resolveActivity(); return; }
+            if (state.sittingBench) { exitSitMode(); return; }
+
             playSound('ui');
+
+            // 1. Constellations
             if (state.isNight && state.weatherMode === 0) {
                 const raycaster = new THREE.Raycaster();
                 raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-                const intersects = raycaster.intersectObjects(constellationsGroup.children);
+                const starNodes = constellationsGroup.children.filter(c => c.type === 'Mesh');
+                const intersects = raycaster.intersectObjects(starNodes);
                 if (intersects.length > 0) {
-                    const matched = constellations.find(c => c.mesh === intersects[0].object);
-                    if (matched) {
-                        document.getElementById('constellation-title').innerText = matched.name;
-                        document.getElementById('constellation-desc').innerText = matched.desc;
-                        document.getElementById('constellation-modal').style.display = 'flex';
-                        return;
+                    const hitStar = intersects[0].object;
+                    const cObj = hitStar.userData.constellation;
+                    if (!hitStar.userData.traced) {
+                        hitStar.userData.traced = true;
+                        hitStar.material = starTracedMat;
+                        cObj.tracedCount++;
+                        cObj.line.material.opacity = cObj.tracedCount / cObj.nodes.length;
+                        playSound('drink');
+                        if (cObj.tracedCount >= cObj.nodes.length && !cObj.completed) {
+                            cObj.completed = true;
+                            state.discovered[cObj.name] = true;
+                            showNotification(`✨ Constellation Complete: ${cObj.name}! Logged in Field Journal.`);
+                        } else {
+                            showNotification(`⭐ Traced star in ${cObj.name} (${cObj.tracedCount}/${cObj.nodes.length})`);
+                        }
+                        updateHUD();
+                    } else {
+                        showNotification(`${cObj.name}: ${cObj.desc}`);
                     }
+                    return;
                 }
             }
 
-            // Harvest Wood Logs & Herbs
+            // 2. Interactables (Wood, Flora, Pages)
             for (let i = interactables.length - 1; i >= 0; i--) {
                 const item = interactables[i];
-                if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.6) {
+                if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.7) {
                     item.active = false;
                     scene.remove(item.mesh);
-
                     if (item.type === 'wood') {
-                        state.woodCount++;
-                        playSound('wood');
-                        showNotification("Gathered 1 firewood log.");
+                        state.woodCount++; playSound('wood'); showNotification("Gathered 1 firewood log.");
                     } else if (item.type === 'forage') {
                         state.foragedItems.push(item.itemData);
-                        playSound('forage');
-                        showNotification(`Foraged ${item.itemData.name}: ${item.itemData.desc}`);
+                        state.discovered[item.itemData.name] = true;
+                        playSound('forage'); showNotification(`🌿 Foraged ${item.itemData.name} — Added to Field Journal!`);
+                    } else if (item.type === 'page') {
+                        state.foundPages.push(item.pageData);
+                        playSound('drink'); showNotification(`📜 Found ${item.pageData.pageTitle}! Read it in Journal [J].`);
                     }
                     updateHUD();
                     return;
                 }
             }
 
-            // Stream Water Collection
+            // 3. Sit on bench
+            for (let s of state.structures) {
+                if (s.type === 'bench' && Math.hypot(player.x - s.mesh.position.x, player.z - s.mesh.position.z) < 2.6) {
+                    enterSitMode(s.mesh); return;
+                }
+            }
+
+            // 4. Stream water
             if (Math.abs(player.x) < 6.5 && Math.abs(player.z) < 150) {
-                state.hasWater = 'stream';
-                playSound('drink');
-                updateHUD();
-                showNotification("Collected fresh mountain stream water.");
-                return;
+                state.hasWater = 'stream'; playSound('drink'); updateHUD();
+                showNotification("Collected fresh mountain stream water."); return;
             }
 
-            // Tent Sleep
+            // 5. Tent
             if (tentMesh && Math.hypot(player.x - tentMesh.position.x, player.z - tentMesh.position.z) < 3.0) {
-                toggleTentSleep();
-                return;
+                toggleTentSleep(); return;
             }
 
-            // Campfire
+            // 6. Campfire
             if (campfireMesh && Math.hypot(player.x - campfireMesh.position.x, player.z - campfireMesh.position.z) < 3.0) {
                 if (!state.fireLit && state.woodCount > 0) {
-                    state.woodCount--;
-                    state.fireLit = true;
-                    state.fireFuel = 100;
+                    state.woodCount--; state.fireLit = true;
                     campfireMesh.getObjectByName('flame').visible = true;
                     if (campfireLight) campfireLight.intensity = 3.2;
-                    playSound('fire');
-                    updateHUD();
-                    showNotification("Lit the campfire! Warm bloom illuminates the night.");
+                    playSound('fire'); updateHUD();
+                    showNotification("Lit campfire! Warm bloom & crackling embers active.");
                     return;
                 } else if (state.fireLit && state.woodCount > 0) {
-                    state.woodCount--;
-                    state.fireFuel = Math.min(100, state.fireFuel + 50);
-                    playSound('wood');
-                    updateHUD();
-                    showNotification("Added firewood to the campfire.");
+                    state.woodCount--; playSound('wood'); updateHUD();
+                    showNotification("Stoked the campfire with fresh wood.");
                     return;
                 }
             }
+        }
+
+        function enterSitMode(benchMesh) {
+            state.sittingBench = benchMesh;
+            player.x = benchMesh.position.x; player.z = benchMesh.position.z; player.rotY = benchMesh.rotation.y;
+            document.exitPointerLock();
+            document.getElementById('ui-layer').classList.add('contemplate-hidden');
+            document.getElementById('contemplate-exit-hint').style.display = 'block';
+        }
+
+        function exitSitMode() {
+            state.sittingBench = null;
+            document.getElementById('ui-layer').classList.remove('contemplate-hidden');
+            document.getElementById('contemplate-exit-hint').style.display = 'none';
+            showNotification("Stood up from the bench.");
+        }
+        document.getElementById('contemplate-exit-hint').addEventListener('click', exitSitMode);
+
+        function dismantleNearestStructure() {
+            for (let i = state.structures.length - 1; i >= 0; i--) {
+                const s = state.structures[i];
+                if (Math.hypot(player.x - s.mesh.position.x, player.z - s.mesh.position.z) < 3.2) {
+                    scene.remove(s.mesh);
+                    state.woodCount += s.woodCost;
+                    state.structures.splice(i, 1);
+                    playSound('wood'); updateHUD();
+                    showNotification(`Dismantled ${s.type} (+${s.woodCost} wood refunded).`);
+                    return;
+                }
+            }
+            showNotification("Stand near a crafted bench or lantern to dismantle it [X].");
         }
 
         function toggleTentSleep() {
             state.inTent = !state.inTent;
             if (state.inTent) {
-                state.timeOfDay = 7.0;
-                state.stamina = 100;
+                state.timeOfDay = 7.0; state.stamina = 100;
                 updateTimeLighting();
-                showNotification("Sleeping in tent... Woke up refreshed at sunrise with 100% stamina.");
+                showNotification("Sleeping in tent... Woke up at sunrise with 100% stamina.");
                 document.exitPointerLock();
             } else {
-                showNotification("Stepped out of the tent into the crisp morning air.");
+                showNotification("Stepped out of the tent into crisp morning air.");
             }
             updateHUD();
         }
 
-        function takePhoto() {
-            playSound('shutter');
-            if (composer) composer.render();
-            else renderer.render(scene, camera);
-            const dataUrl = renderer.domElement.toDataURL('image/png');
-            state.photos.push(dataUrl);
-            showNotification("📷 Photo captured and saved to Album!");
+        function toggleBinoculars() {
+            state.binocularsActive = !state.binocularsActive;
+            camera.fov = state.binocularsActive ? 22 : 62;
+            camera.updateProjectionMatrix();
+            document.getElementById('cinematic-vignette').classList.toggle('binoculars', state.binocularsActive);
+            document.getElementById('binoculars-hud').style.display = state.binocularsActive ? 'block' : 'none';
+            playSound('ui');
         }
 
-        // Action & Crafting Buttons (All Grounded via getTerrainHeight)
+        // =========================================================================
+        // PHOTOGRAPHY & BOUNTY SYSTEM
+        // =========================================================================
+        function takePhoto() {
+            playSound('shutter');
+            if (composer) composer.render(); else renderer.render(scene, camera);
+            const dataUrl = renderer.domElement.toDataURL('image/png');
+
+            let caption = "Serenade Woods Panorama", bountyUnlocked = null;
+            const forward = new THREE.Vector3(Math.sin(player.rotY), 0, Math.cos(player.rotY));
+
+            if (state.isNight && state.fireLit && campfireMesh && Math.abs(campfireMesh.position.x) < 16) {
+                caption = "Campfire Reflections by the Stream";
+                if (!state.bountiesCompleted["Campfire by the Water"]) { state.bountiesCompleted["Campfire by the Water"] = true; bountyUnlocked = "Campfire by the Water"; }
+            }
+            if (state.isNight && player.pitch > 0.35 && state.weatherMode === 0) {
+                caption = "Starry Canopy & Constellations";
+                if (!state.bountiesCompleted["Starry Night Canopy"]) { state.bountiesCompleted["Starry Night Canopy"] = true; bountyUnlocked = "Starry Night Canopy"; }
+            }
+            for (let w of wildlifeEntities) {
+                const toAnimal = new THREE.Vector3(w.x - player.x, 0, w.z - player.z);
+                if (toAnimal.length() < 28 && toAnimal.normalize().dot(forward) > 0.65) {
+                    caption = `${w.species} in the Wild`;
+                    state.discovered[w.species] = true;
+                    if (!state.bountiesCompleted["Wildlife Encounter"]) { state.bountiesCompleted["Wildlife Encounter"] = true; bountyUnlocked = "Wildlife Encounter"; }
+                    break;
+                }
+            }
+            for (let lm of landmarks) {
+                const toLm = new THREE.Vector3(lm.x - player.x, 0, lm.z - player.z);
+                if (toLm.length() < 32 && toLm.normalize().dot(forward) > 0.6) {
+                    caption = lm.name;
+                    if (!state.bountiesCompleted["Ancient Landmark"]) { state.bountiesCompleted["Ancient Landmark"] = true; bountyUnlocked = "Ancient Landmark"; }
+                    break;
+                }
+            }
+
+            state.photos.push({ url: dataUrl, caption });
+            updateHUD();
+            if (bountyUnlocked) showNotification(`🏆 Photo Bounty Completed: "${bountyUnlocked}"!`);
+            else showNotification(`📷 Captured "${caption}" — Saved to Album!`);
+        }
+
+        // =========================================================================
+        // UI & ACTION BUTTONS
+        // =========================================================================
         document.getElementById('action-tent').addEventListener('click', () => {
             playSound('ui');
             if (!state.tentBuilt) {
                 const tentGroup = new THREE.Group();
                 const tentMat = new THREE.MeshStandardMaterial({ color: 0x3b5323, roughness: 0.85, side: THREE.DoubleSide });
-                const tentGeo = new THREE.ConeGeometry(2, 2.5, 4);
-                const tentMeshObj = new THREE.Mesh(tentGeo, tentMat);
-                tentMeshObj.position.y = 1.22; // Embedded slightly to eliminate gap
-                tentMeshObj.rotation.y = Math.PI / 4;
-                tentMeshObj.castShadow = true;
-                tentMeshObj.receiveShadow = true;
+                const tentMeshObj = new THREE.Mesh(new THREE.ConeGeometry(2, 2.5, 4), tentMat);
+                tentMeshObj.position.y = 1.22; tentMeshObj.rotation.y = Math.PI / 4; tentMeshObj.castShadow = true;
                 tentGroup.add(tentMeshObj);
-
-                const tx = player.x + Math.sin(player.rotY) * 3.2;
-                const tz = player.z + Math.cos(player.rotY) * 3.2;
-                const ty = getTerrainHeight(tx, tz);
-                tentGroup.position.set(tx, ty, tz);
+                const tx = player.x + Math.sin(player.rotY) * 3.2, tz = player.z + Math.cos(player.rotY) * 3.2;
+                tentGroup.position.set(tx, getTerrainHeight(tx, tz), tz);
                 scene.add(tentGroup);
-                tentMesh = tentGroup;
-                state.tentBuilt = true;
-                document.getElementById('lbl-tent').innerText = "Sleep in Tent";
-                showNotification("Pitched canvas tent directly onto the terrain.");
+                tentMesh = tentGroup; state.tentBuilt = true;
+                document.getElementById('lbl-tent').innerText = "Sleep";
+                showNotification("Pitched canvas tent onto terrain.");
             } else {
                 toggleTentSleep();
             }
@@ -1657,187 +1382,255 @@
                     const angle = (i / 7) * Math.PI * 2;
                     const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.28, 1), stoneMat);
                     stone.position.set(Math.cos(angle) * 0.8, 0.12, Math.sin(angle) * 0.8);
-                    stone.castShadow = true;
-                    stone.receiveShadow = true;
                     fireGroup.add(stone);
                 }
-                // High-luminance emissive flame to trigger UnrealBloomPass glow
-                const flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.5, 0.85, 0.2) });
-                const flame = new THREE.Mesh(new THREE.ConeGeometry(0.48, 1.25, 6), flameMat);
-                flame.name = 'flame';
-                flame.position.y = 0.6;
-                flame.visible = false;
-                fireGroup.add(flame);
-
+                const flame = new THREE.Mesh(new THREE.ConeGeometry(0.48, 1.25, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.5, 0.85, 0.2) }));
+                flame.name = 'flame'; flame.position.y = 0.6; flame.visible = false; fireGroup.add(flame);
                 const cLight = new THREE.PointLight(0xff7722, 0, 18);
-                cLight.position.set(0, 1.1, 0);
-                fireGroup.add(cLight);
-                campfireLight = cLight;
+                cLight.position.set(0, 1.1, 0); fireGroup.add(cLight); campfireLight = cLight;
 
-                const fx = player.x + Math.sin(player.rotY) * 3.0;
-                const fz = player.z + Math.cos(player.rotY) * 3.0;
-                const fy = getTerrainHeight(fx, fz);
-                fireGroup.position.set(fx, fy, fz);
-                scene.add(fireGroup);
-                campfireMesh = fireGroup;
-                state.fireBuilt = true;
+                const fx = player.x + Math.sin(player.rotY) * 3.0, fz = player.z + Math.cos(player.rotY) * 3.0;
+                fireGroup.position.set(fx, getTerrainHeight(fx, fz), fz);
+                scene.add(fireGroup); campfireMesh = fireGroup; state.fireBuilt = true;
                 document.getElementById('lbl-fire').innerText = "Light Fire";
-                showNotification("Built stone fire ring on the ground.");
+                showNotification("Built stone fire ring.");
             } else if (state.fireBuilt && !state.fireLit && state.woodCount > 0) {
-                state.woodCount--;
-                state.fireLit = true;
-                state.fireFuel = 100;
-                if (campfireMesh) campfireMesh.getObjectByName('flame').visible = true;
+                state.woodCount--; state.fireLit = true;
+                campfireMesh.getObjectByName('flame').visible = true;
                 if (campfireLight) campfireLight.intensity = 3.2;
-                playSound('fire');
-                document.getElementById('lbl-fire').innerText = "Extinguish Fire";
-                showNotification("Lit campfire! Warm volumetric glow illuminates the night.");
+                playSound('fire'); document.getElementById('lbl-fire').innerText = "Extinguish";
+                showNotification("Lit campfire! Warm bloom & embers active.");
             } else if (state.fireBuilt && state.fireLit) {
                 state.fireLit = false;
-                if (campfireMesh) campfireMesh.getObjectByName('flame').visible = false;
+                campfireMesh.getObjectByName('flame').visible = false;
                 if (campfireLight) campfireLight.intensity = 0;
                 document.getElementById('lbl-fire').innerText = "Light Fire";
                 showNotification("Extinguished campfire.");
+            } else {
+                showNotification("Gather at least 1 wood log to light campfire!");
             }
             updateHUD();
         });
 
-        document.getElementById('action-craft').addEventListener('click', () => {
+        document.getElementById('action-bench').addEventListener('click', () => {
             playSound('ui');
             if (state.woodCount >= 2) {
                 state.woodCount -= 2;
                 const benchGroup = new THREE.Group();
                 const seat = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.18, 0.8), plankMat);
-                seat.position.y = 0.78;
-                seat.castShadow = true;
-                seat.receiveShadow = true;
-                benchGroup.add(seat);
-
-                const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.82, 0.65), plankMat);
-                leg1.position.set(-0.82, 0.38, 0);
-                leg1.castShadow = true;
-                benchGroup.add(leg1);
-                const leg2 = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.82, 0.65), plankMat);
-                leg2.position.set(0.82, 0.38, 0);
-                leg2.castShadow = true;
-                benchGroup.add(leg2);
-
-                const cx = player.x + Math.sin(player.rotY) * 3.0;
-                const cz = player.z + Math.cos(player.rotY) * 3.0;
-                const cy = getTerrainHeight(cx, cz);
-                benchGroup.position.set(cx, cy, cz);
-                benchGroup.rotation.y = player.rotY;
-                scene.add(benchGroup);
-                state.structures.push(benchGroup);
-                showNotification("🪵 Crafted and placed a grounded wooden bench (cost: 2 wood).");
+                seat.position.y = 0.78; seat.castShadow = true; benchGroup.add(seat);
+                [-0.82, 0.82].forEach(lx => {
+                    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.82, 0.65), plankMat);
+                    leg.position.set(lx, 0.38, 0); benchGroup.add(leg);
+                });
+                const cx = player.x + Math.sin(player.rotY) * 3.0, cz = player.z + Math.cos(player.rotY) * 3.0;
+                benchGroup.position.set(cx, getTerrainHeight(cx, cz), cz);
+                benchGroup.rotation.y = player.rotY; scene.add(benchGroup);
+                state.structures.push({ type: 'bench', mesh: benchGroup, woodCost: 2 });
+                showNotification("🪵 Crafted Wooden Bench! Press [E] near it to Sit & Contemplate.");
                 updateHUD();
-            } else {
-                showNotification("You need at least 2 wood logs to craft a wooden bench!");
+            } else { showNotification("Need 2 wood logs to craft a Wooden Bench."); }
+        });
+
+        document.getElementById('action-lantern').addEventListener('click', () => {
+            playSound('ui');
+            if (state.woodCount >= 1) {
+                state.woodCount -= 1;
+                const postGroup = new THREE.Group();
+                const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 2.2, 6), plankMat);
+                post.position.y = 1.1; postGroup.add(post);
+                const arm = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.08), plankMat);
+                arm.position.set(0.2, 2.1, 0); postGroup.add(arm);
+                const bulb = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.28, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.5, 0.4) }));
+                bulb.position.set(0.4, 1.9, 0); postGroup.add(bulb);
+                const pLight = new THREE.PointLight(0xffb74d, 2.0, 14);
+                pLight.position.set(0.4, 1.9, 0); postGroup.add(pLight);
+
+                const lx = player.x + Math.sin(player.rotY) * 2.5, lz = player.z + Math.cos(player.rotY) * 2.5;
+                postGroup.position.set(lx, getTerrainHeight(lx, lz), lz);
+                scene.add(postGroup);
+                state.structures.push({ type: 'lantern', mesh: postGroup, woodCost: 1 });
+                showNotification("🏮 Placed Tripod Lantern! Press [X] near it to dismantle.");
+                updateHUD();
+            } else { showNotification("Need 1 wood log to craft a Tripod Lantern."); }
+        });
+
+        document.getElementById('action-fish').addEventListener('click', () => {
+            playSound('ui');
+            if (!state.hasFishingRod) {
+                if (state.woodCount >= 2) {
+                    state.woodCount -= 2; state.hasFishingRod = true;
+                    document.getElementById('lbl-fish').innerText = "Cast Line";
+                    updateHUD();
+                    showNotification("🎣 Crafted Wooden Fishing Rod! Walk to stream and click Cast Line.");
+                } else { showNotification("Need 2 wood logs to craft Fishing Rod."); }
+                return;
             }
+            if (Math.abs(player.x) < 7.5) { startActivity('fishing'); }
+            else { showNotification("Walk down to the mountain stream bank to cast your fishing line."); }
         });
 
         document.getElementById('action-water').addEventListener('click', () => {
             playSound('ui');
             if (Math.abs(player.x) < 6.5) {
-                state.hasWater = 'stream';
-                updateHUD();
-                showNotification("Collected fresh stream water.");
-            } else {
-                showNotification("Walk down to the stream bank to collect water.");
-            }
+                state.hasWater = 'stream'; updateHUD();
+                showNotification("💧 Collected fresh mountain stream water.");
+            } else { showNotification("Walk down to the stream bank to collect water."); }
         });
 
         document.getElementById('action-tea').addEventListener('click', () => {
             playSound('ui');
-            const hasMint = state.foragedItems.findIndex(i => i.type === 'herb');
-            if (state.hasWater === 'stream' && state.fireLit && hasMint !== -1) {
+            const herbIdx = state.foragedItems.findIndex(i => i.type === 'herb');
+            if (state.hasWater === 'stream' && state.fireLit && herbIdx !== -1) {
                 state.hasWater = false;
-                state.foragedItems.splice(hasMint, 1);
-                state.stamina = Math.min(100, state.stamina + 35);
-                playSound('drink');
-                updateHUD();
-                showNotification("🍵 Brewed and drank hot herbal tea! Stamina restored.");
-            } else if (!state.fireLit) {
-                showNotification("You need a lit campfire to boil tea!");
-            } else if (hasMint === -1) {
-                showNotification("Forage wild herbs first to brew tea!");
-            } else {
-                showNotification("Collect fresh stream water first.");
-            }
+                const herb = state.foragedItems.splice(herbIdx, 1)[0];
+                state.stamina = Math.min(100, state.stamina + 40);
+                playSound('drink'); updateHUD();
+                showNotification(`🍵 Steeped ${herb.name} in boiling water! Restored +40% stamina.`);
+            } else if (!state.fireLit) { showNotification("You need a lit campfire to boil herbal tea!"); }
+            else if (herbIdx === -1) { showNotification("Forage wild mint or chamomile first!"); }
+            else { showNotification("Collect fresh stream water first."); }
         });
 
-        document.getElementById('action-food').addEventListener('click', () => {
+        document.getElementById('action-cook').addEventListener('click', () => {
             playSound('ui');
+            const mushIdx = state.foragedItems.findIndex(i => i.type === 'mushroom');
+            if (state.fireLit && (state.rawFishCount > 0 || mushIdx !== -1)) {
+                if (state.rawFishCount > 0) state.rawFishCount--;
+                else state.foragedItems.splice(mushIdx, 1);
+                updateHUD(); startActivity('roasting'); return;
+            }
             const berryIdx = state.foragedItems.findIndex(i => i.type === 'berry');
             if (berryIdx !== -1) {
-                const item = state.foragedItems.splice(berryIdx, 1)[0];
+                const berry = state.foragedItems.splice(berryIdx, 1)[0];
                 state.stamina = Math.min(100, state.stamina + 25);
-                playSound('drink');
-                updateHUD();
-                showNotification(`🫐 Ate ${item.name}! Revitalizing. Stamina restored.`);
-            } else {
-                showNotification("No wild berries in inventory. Forage berry bushes in the forest!");
-            }
+                playSound('drink'); updateHUD();
+                showNotification(`🫐 Ate ${berry.name}! Restored +25% stamina.`);
+            } else { showNotification("Catch trout in stream or forage mushrooms/berries to eat!"); }
         });
 
         document.getElementById('action-camera').addEventListener('click', () => takePhoto());
 
-        document.getElementById('action-album').addEventListener('click', () => {
-            playSound('ui');
-            const container = document.getElementById('album-container');
-            container.innerHTML = '';
-            if (state.photos.length === 0) {
-                container.innerHTML = '<div class="no-photos">No photos captured yet. Press [C] in the forest to take pictures!</div>';
-            } else {
-                state.photos.forEach(url => {
-                    const img = document.createElement('img');
-                    img.src = url;
-                    img.className = 'photo-thumb';
-                    container.appendChild(img);
-                });
+        // =========================================================================
+        // FIELD NATURALIST JOURNAL RENDERING
+        // =========================================================================
+        function toggleJournal() {
+            const modal = document.getElementById('journal-modal');
+            const isOpen = modal.style.display === 'flex';
+            if (isOpen) { modal.style.display = 'none'; }
+            else {
+                document.exitPointerLock();
+                renderJournalTab(state.activeJournalTab);
+                modal.style.display = 'flex';
             }
-            document.getElementById('album-modal').style.display = 'flex';
-        });
-
-        document.getElementById('close-album-btn').addEventListener('click', () => {
-            document.getElementById('album-modal').style.display = 'none';
-        });
-
-        // Top Bar Controls
-        document.getElementById('btn-toggle-time').addEventListener('click', () => {
-            state.timeOfDay = state.timeOfDay >= 18 ? 13 : 21;
-            updateTimeLighting();
             playSound('ui');
-        });
+        }
 
+        function renderJournalTab(tab) {
+            state.activeJournalTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            const box = document.getElementById('journal-content');
+            box.innerHTML = '';
+
+            if (tab === 'flora') {
+                const entries = [
+                    { key: "Wild Mint Herb", desc: "Aromatic Mentha leaves growing in damp moss. Steep in boiling water for invigorating tea." },
+                    { key: "Healing Chamomile", desc: "Delicate white petals with golden centers. Calms fatigue and restores endurance." },
+                    { key: "Forest Blueberries", desc: "Plump Vaccinium berries rich in antioxidants. Eat raw for an instant stamina burst." },
+                    { key: "Golden Chanterelle", desc: "Prized apricot-scented woodland mushroom. Roast over campfire embers for a hearty meal." },
+                    { key: "Forest Deer", desc: "Graceful woodland herbivores that graze near stream. Walk slowly or sit on bench to photograph." },
+                    { key: "Red Fox", desc: "Agile ridge-dwelling hunters with russet coats and white-tipped tails." },
+                    { key: "Barn Owl", desc: "Silent nocturnal sentinels perched on old pine stumps, watching the forest floor." }
+                ];
+                entries.forEach(e => {
+                    const unlocked = state.discovered[e.key];
+                    box.innerHTML += `
+                        <div class="entry-card ${unlocked ? '' : 'locked'}">
+                            <div class="entry-title"><span>${unlocked ? e.key : '??? Undiscovered Species'}</span><span>${unlocked ? '✅ Documented' : '🔒 Unseen'}</span></div>
+                            <div class="entry-desc">${unlocked ? e.desc : 'Explore the woods, forage plants, or photograph wildlife to unlock entry.'}</div>
+                        </div>`;
+                });
+            } else if (tab === 'bounties') {
+                const bounties = [
+                    { key: "Campfire by the Water", desc: "Light a campfire near the stream bank at night and capture its warm reflection." },
+                    { key: "Starry Night Canopy", desc: "Look upward into a clear night sky and photograph the starry canopy." },
+                    { key: "Wildlife Encounter", desc: "Approach a Forest Deer, Red Fox, or Barn Owl quietly and capture a clear photograph." },
+                    { key: "Ancient Landmark", desc: "Discover the Standing Stones, Abandoned Watchtower, or Cairn Shrine and photograph it." }
+                ];
+                bounties.forEach(b => {
+                    const done = state.bountiesCompleted[b.key];
+                    box.innerHTML += `
+                        <div class="entry-card">
+                            <div class="entry-title"><span>${b.key}</span><span>${done ? '🏆 Completed' : '📷 Open Prompt'}</span></div>
+                            <div class="entry-desc">${b.desc}</div>
+                        </div>`;
+                });
+            } else if (tab === 'stars') {
+                constellationObjects.forEach(c => {
+                    box.innerHTML += `
+                        <div class="entry-card ${c.completed ? '' : 'locked'}">
+                            <div class="entry-title"><span>${c.name}</span><span>${c.completed ? '✨ Traced' : `${c.tracedCount}/${c.nodes.length} Stars`}</span></div>
+                            <div class="entry-desc">${c.desc}</div>
+                        </div>`;
+                });
+            } else if (tab === 'lore') {
+                if (state.foundPages.length === 0) {
+                    box.innerHTML = `<div class="entry-card"><div class="entry-desc">No Lost Journal Pages found yet. Explore off the main stream to find Standing Stones, Ranger Lookout, and Cairn Shrine.</div></div>`;
+                } else {
+                    state.foundPages.forEach(p => {
+                        box.innerHTML += `
+                            <div class="entry-card">
+                                <div class="entry-title"><span>${p.pageTitle}</span><span>📜 Recovered</span></div>
+                                <div class="entry-desc">"${p.pageText}"</div>
+                            </div>`;
+                    });
+                }
+            } else if (tab === 'album') {
+                if (state.photos.length === 0) {
+                    box.innerHTML = `<div class="entry-card"><div class="entry-desc">No photographs taken yet. Press [C] in the forest to snap pictures!</div></div>`;
+                } else {
+                    const grid = document.createElement('div');
+                    grid.className = 'photo-grid';
+                    state.photos.forEach(p => {
+                        grid.innerHTML += `<div class="photo-item"><img src="${p.url}" class="photo-thumb"><div class="photo-caption">${p.caption}</div></div>`;
+                    });
+                    box.appendChild(grid);
+                }
+            }
+        }
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => renderJournalTab(btn.dataset.tab));
+        });
+        document.getElementById('btn-journal').addEventListener('click', toggleJournal);
+        document.getElementById('close-journal-btn').addEventListener('click', toggleJournal);
+        document.getElementById('btn-binoculars').addEventListener('click', toggleBinoculars);
+
+        // Top controls
+        document.getElementById('btn-toggle-time').addEventListener('click', () => {
+            state.timeOfDay = state.timeOfDay >= 18 || state.timeOfDay < 6 ? 13 : 21;
+            updateTimeLighting(); playSound('ui');
+        });
         document.getElementById('btn-toggle-weather').addEventListener('click', () => {
             state.weatherMode = (state.weatherMode + 1) % 3;
-            updateWeatherEffects();
-            playSound('ui');
+            updateWeatherEffects(); playSound('ui');
         });
-
         document.getElementById('btn-mute').addEventListener('click', () => {
             state.muted = !state.muted;
-            if (ambientGain) ambientGain.gain.value = state.muted ? 0 : 0.14;
+            if (masterGain) masterGain.gain.value = state.muted ? 0 : 1.0;
             document.getElementById('btn-mute').innerText = state.muted ? "Audio: OFF" : "Audio: ON";
             playSound('ui');
         });
-
         document.getElementById('start-btn').addEventListener('click', () => {
             initAudio();
             state.gameStarted = true;
             document.getElementById('start-screen').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('start-screen').style.display = 'none';
-            }, 500);
+            setTimeout(() => { document.getElementById('start-screen').style.display = 'none'; }, 500);
             renderer.domElement.requestPointerLock();
         });
 
-        document.getElementById('close-constellation-btn').addEventListener('click', () => {
-            document.getElementById('constellation-modal').style.display = 'none';
-        });
-
         document.getElementById('touch-action-btn').addEventListener('click', () => handleInteraction());
+        document.getElementById('touch-zoom-btn').addEventListener('click', () => toggleBinoculars());
         document.getElementById('touch-run-btn').addEventListener('click', () => {
             state.isRunning = !state.isRunning;
             document.getElementById('touch-run-btn').style.background = state.isRunning ? '#38bdf8' : 'rgba(11, 17, 29, 0.88)';
@@ -1846,139 +1639,102 @@
         let notifTimeout = null;
         function showNotification(text) {
             const banner = document.getElementById('notification-banner');
-            banner.innerText = text;
-            banner.classList.add('show');
+            banner.innerText = text; banner.classList.add('show');
             clearTimeout(notifTimeout);
-            notifTimeout = setTimeout(() => {
-                banner.classList.remove('show');
-            }, 3800);
+            notifTimeout = setTimeout(() => { banner.classList.remove('show'); }, 4000);
         }
 
         function updateHUD() {
-            const hours = Math.floor(state.timeOfDay);
-            const mins = Math.floor((state.timeOfDay - hours) * 60);
+            const hours = Math.floor(state.timeOfDay), mins = Math.floor((state.timeOfDay - hours) * 60);
             document.getElementById('hud-time').innerText = `${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
-            const weatherLabels = ['Clear ☀️', 'Rain 🌧️', 'Fog 🌫️'];
-            document.getElementById('hud-weather').innerText = weatherLabels[state.weatherMode];
+            document.getElementById('hud-weather').innerText = ['Clear ☀️', 'Rain 🌧️', 'Fog 🌫️'][state.weatherMode];
             document.getElementById('btn-toggle-weather').innerText = `Weather: ${['Clear', 'Rain', 'Fog'][state.weatherMode]}`;
             document.getElementById('btn-toggle-time').innerText = state.isNight ? "Time: Night" : "Time: Day";
             document.getElementById('hud-wood').innerText = state.woodCount;
-            document.getElementById('hud-items').innerText = state.foragedItems.length;
-            document.getElementById('hud-structures').innerText = state.structures.length;
+            document.getElementById('hud-items').innerText = `${state.foragedItems.length} / ${state.rawFishCount}`;
+            const discoveredCount = Object.values(state.discovered).filter(Boolean).length + state.foundPages.length;
+            document.getElementById('hud-journal').innerText = `${discoveredCount}/14`;
             document.getElementById('hud-stamina').innerText = `${Math.floor(state.stamina)}%`;
         }
 
-        // =========================================================================
-        // ATMOSPHERIC DAY/NIGHT & WEATHER LIGHTING UPDATES
-        // =========================================================================
         function updateTimeLighting() {
             state.isNight = state.timeOfDay < 6 || state.timeOfDay > 19;
-
             const sunAngle = ((state.timeOfDay - 6) / 24) * Math.PI * 2;
-            const sunY = Math.sin(sunAngle);
-            const sunX = Math.cos(sunAngle);
+            const sunY = Math.sin(sunAngle), sunX = Math.cos(sunAngle);
 
             sunLight.position.set(sunX * 100, Math.max(-20, sunY * 100), 40);
             skyUniforms.sunDirection.value.copy(sunLight.position).normalize();
             waterUniforms.uSunDir.value.copy(skyUniforms.sunDirection.value);
 
             if (state.isNight) {
-                sunLight.intensity = 0.04;
-                hemiLight.intensity = 0.14;
+                sunLight.intensity = 0.04; hemiLight.intensity = 0.14;
                 skyUniforms.topColor.value.setHex(0x02040a);
                 skyUniforms.horizonColor.value.setHex(0x09111e);
-                skyUniforms.nightFactor.value = 1.0;
-                waterUniforms.uNightFactor.value = 1.0;
+                skyUniforms.nightFactor.value = 1.0; waterUniforms.uNightFactor.value = 1.0;
                 scene.fog.color.setHex(0x060b14);
-
                 starsGroup.material.opacity = (state.weatherMode === 0) ? 0.95 : 0.2;
                 constellationsGroup.visible = (state.weatherMode === 0);
+                if (firefliesPoints) firefliesPoints.material.opacity = 0.85;
             } else if (state.timeOfDay < 8 || state.timeOfDay > 17) {
-                // Warm Golden Hour Dawn / Dusk
-                sunLight.intensity = 0.85;
-                sunLight.color.setHex(0xffb36b);
-                hemiLight.intensity = 0.4;
+                sunLight.intensity = 0.85; sunLight.color.setHex(0xffb36b); hemiLight.intensity = 0.4;
                 skyUniforms.topColor.value.setHex(0x283c63);
                 skyUniforms.horizonColor.value.setHex(0xf99b66);
                 skyUniforms.sunColor.value.setHex(0xffc978);
-                skyUniforms.nightFactor.value = 0.25;
-                waterUniforms.uNightFactor.value = 0.25;
+                skyUniforms.nightFactor.value = 0.25; waterUniforms.uNightFactor.value = 0.25;
                 scene.fog.color.setHex(0xd98a6c);
-
-                starsGroup.material.opacity = 0.15;
-                constellationsGroup.visible = false;
+                starsGroup.material.opacity = 0.15; constellationsGroup.visible = false;
+                if (firefliesPoints) firefliesPoints.material.opacity = 0.35;
             } else {
-                // Crisp Daylight Cyan
-                sunLight.intensity = 1.35;
-                sunLight.color.setHex(0xfff5e0);
-                hemiLight.intensity = 0.6;
+                sunLight.intensity = 1.35; sunLight.color.setHex(0xfff5e0); hemiLight.intensity = 0.6;
                 const isFoggy = state.weatherMode === 2;
                 skyUniforms.topColor.value.setHex(isFoggy ? 0x64748b : 0x1d63b8);
                 skyUniforms.horizonColor.value.setHex(isFoggy ? 0x94a3b8 : 0xa6d5fa);
                 skyUniforms.sunColor.value.setHex(0xfff6dd);
-                skyUniforms.nightFactor.value = 0.0;
-                waterUniforms.uNightFactor.value = 0.0;
+                skyUniforms.nightFactor.value = 0.0; waterUniforms.uNightFactor.value = 0.0;
                 scene.fog.color.setHex(isFoggy ? 0x8fa1b5 : 0x9ac9f0);
-
-                starsGroup.material.opacity = 0;
-                constellationsGroup.visible = false;
+                starsGroup.material.opacity = 0; constellationsGroup.visible = false;
+                if (firefliesPoints) firefliesPoints.material.opacity = 0;
             }
         }
 
         function updateWeatherEffects() {
-            if (state.weatherMode === 1) {
-                rainSystem.visible = true;
-                scene.fog.density = 0.022;
-            } else if (state.weatherMode === 2) {
-                rainSystem.visible = false;
-                scene.fog.density = 0.052;
-            } else {
-                rainSystem.visible = false;
-                scene.fog.density = 0.011;
-            }
-            updateTimeLighting();
-            updateHUD();
+            if (state.weatherMode === 1) { rainSystem.visible = true; scene.fog.density = 0.022; }
+            else if (state.weatherMode === 2) { rainSystem.visible = false; scene.fog.density = 0.052; }
+            else { rainSystem.visible = false; scene.fog.density = 0.011; }
+            updateTimeLighting(); updateHUD();
         }
 
         // =========================================================================
-        // MINIMAP RADAR
+        // MINIMAP
         // =========================================================================
-        const minimapCanvas = document.getElementById('minimap-canvas');
-        const minimapCtx = minimapCanvas.getContext('2d');
-
+        const minimapCanvas = document.getElementById('minimap-canvas'), minimapCtx = minimapCanvas.getContext('2d');
         function drawMinimap() {
-            minimapCtx.clearRect(0, 0, 130, 130);
+            minimapCtx.clearRect(0, 0, 124, 124);
             minimapCtx.fillStyle = 'rgba(11, 17, 29, 0.92)';
-            minimapCtx.fillRect(0, 0, 130, 130);
+            minimapCtx.fillRect(0, 0, 124, 124);
 
-            const scale = 1.5;
-            const cx = 65;
-            const cy = 65;
-
-            // Stream river relative to player
+            const scale = 1.1, cx = 62, cy = 62;
             const streamScreenX = cx + (0 - player.x) * scale;
             minimapCtx.fillStyle = '#38bdf8';
-            minimapCtx.fillRect(streamScreenX - (5 * scale), 0, 10 * scale, 130);
+            minimapCtx.fillRect(streamScreenX - (5 * scale), 0, 10 * scale, 124);
 
-            // Player dot
-            minimapCtx.fillStyle = '#f43f5e';
-            minimapCtx.beginPath();
-            minimapCtx.arc(cx, cy, 4, 0, Math.PI * 2);
-            minimapCtx.fill();
-
-            // Campfire dot
+            landmarks.forEach(lm => {
+                const lx = (lm.x - player.x) * scale + cx, lz = (lm.z - player.z) * scale + cy;
+                minimapCtx.fillStyle = '#fbbf24'; minimapCtx.fillRect(lx - 2.5, lz - 2.5, 5, 5);
+            });
+            wildlifeEntities.forEach(w => {
+                const wx = (w.x - player.x) * scale + cx, wz = (w.z - player.z) * scale + cy;
+                minimapCtx.fillStyle = '#34d399'; minimapCtx.beginPath(); minimapCtx.arc(wx, wz, 2.5, 0, Math.PI * 2); minimapCtx.fill();
+            });
             if (state.fireBuilt && campfireMesh) {
-                const dx = (campfireMesh.position.x - player.x) * scale + cx;
-                const dz = (campfireMesh.position.z - player.z) * scale + cy;
-                minimapCtx.fillStyle = '#f97316';
-                minimapCtx.beginPath();
-                minimapCtx.arc(dx, dz, 3.5, 0, Math.PI * 2);
-                minimapCtx.fill();
+                const dx = (campfireMesh.position.x - player.x) * scale + cx, dz = (campfireMesh.position.z - player.z) * scale + cy;
+                minimapCtx.fillStyle = '#f97316'; minimapCtx.beginPath(); minimapCtx.arc(dx, dz, 3.5, 0, Math.PI * 2); minimapCtx.fill();
             }
+            minimapCtx.fillStyle = '#f43f5e'; minimapCtx.beginPath(); minimapCtx.arc(cx, cy, 4, 0, Math.PI * 2); minimapCtx.fill();
         }
 
         // =========================================================================
-        // MAIN 60FPS ANIMATION LOOP
+        // ANIMATION & SIMULATION LOOP
         // =========================================================================
         const clock = new THREE.Clock();
 
@@ -1987,13 +1743,9 @@
             const dt = Math.min(clock.getDelta(), 0.1);
             const elapsed = clock.getElapsedTime();
 
-            // Update Shader Uniforms (Wind & Water)
             waterUniforms.uTime.value = elapsed;
-            for (let i = 0; i < windShaderUniforms.length; i++) {
-                windShaderUniforms[i].value = elapsed;
-            }
+            for (let i = 0; i < windShaderUniforms.length; i++) windShaderUniforms[i].value = elapsed;
 
-            // Flicker campfire light organically
             if (state.fireLit && campfireLight) {
                 campfireLight.intensity = 3.0 + Math.sin(elapsed * 14.0) * 0.4 + Math.cos(elapsed * 23.0) * 0.25;
                 const flame = campfireMesh.getObjectByName('flame');
@@ -2003,7 +1755,44 @@
                 }
             }
 
+            if (state.activity) {
+                state.activity.progress += state.activity.dir * 68 * dt;
+                if (state.activity.progress >= 100) { state.activity.progress = 100; state.activity.dir = -1; }
+                else if (state.activity.progress <= 0) { state.activity.progress = 0; state.activity.dir = 1; }
+                document.getElementById('activity-fill').style.width = `${state.activity.progress}%`;
+            }
+
+            wildlifeEntities.forEach(w => {
+                if (w.stationary) {
+                    w.mesh.rotation.y = Math.atan2(player.x - w.x, player.z - w.z);
+                    return;
+                }
+                const distToPlayer = Math.hypot(player.x - w.x, player.z - w.z);
+                const playerIsLoud = (keys.shift || state.isRunning) && (keys.w || keys.a || keys.s || keys.d);
+                if (distToPlayer < (playerIsLoud ? 18 : 6.5) && !state.sittingBench) {
+                    w.dir = Math.atan2(w.x - player.x, w.z - player.z);
+                    w.fleeing = true; w.stateTimer = 2.0;
+                } else {
+                    w.fleeing = false; w.stateTimer -= dt;
+                    if (w.stateTimer <= 0) { w.stateTimer = 2.5 + Math.random() * 4.5; w.dir += (Math.random() - 0.5) * 2.2; }
+                }
+                const spd = w.fleeing ? 4.8 : 1.1;
+                const nx = w.x + Math.sin(w.dir) * spd * dt, nz = w.z + Math.cos(w.dir) * spd * dt;
+                if (Math.abs(nx) > 6.5 && Math.abs(nx) < 120 && Math.abs(nz) < 120) { w.x = nx; w.z = nz; }
+                else { w.dir += Math.PI * 0.7; }
+                w.mesh.position.set(w.x, getTerrainHeight(w.x, w.z), w.z);
+                w.mesh.rotation.y = w.dir;
+            });
+
+            if (firefliesPoints && firefliesPoints.material.opacity > 0) {
+                const ffArr = firefliesPoints.geometry.attributes.position.array;
+                for (let i = 0; i < ffArr.length; i += 3) ffArr[i + 1] = 1.2 + Math.sin(elapsed * 1.8 + i) * 0.6;
+                firefliesPoints.geometry.attributes.position.needsUpdate = true;
+            }
+
             if (state.gameStarted && !state.inTent) {
+                updateSpatialAudio(elapsed);
+
                 state.timeOfDay += state.timeSpeed * (dt / 60);
                 if (state.timeOfDay >= 24) state.timeOfDay = 0;
                 updateTimeLighting();
@@ -2012,44 +1801,35 @@
                 if ((keys.shift || state.isRunning) && state.stamina > 5) {
                     moveSpeed *= player.runMultiplier;
                     state.stamina = Math.max(0, state.stamina - 24 * dt);
-                } else {
-                    state.stamina = Math.min(100, state.stamina + 16 * dt);
-                }
+                } else { state.stamina = Math.min(100, state.stamina + 16 * dt); }
 
-                let moveX = 0;
-                let moveZ = 0;
-                if (keys.w) moveZ -= 1;
-                if (keys.s) moveZ += 1;
-                if (keys.a) moveX -= 1;
-                if (keys.d) moveX += 1;
+                let moveX = 0, moveZ = 0;
+                if (!state.sittingBench && !state.activity) {
+                    if (keys.w) moveZ -= 1;
+                    if (keys.s) moveZ += 1;
+                    if (keys.a) moveX -= 1;
+                    if (keys.d) moveX += 1;
+                }
 
                 if (moveX !== 0 || moveZ !== 0) {
                     const len = Math.hypot(moveX, moveZ);
-                    moveX /= len;
-                    moveZ /= len;
-
-                    const forwardX = Math.sin(player.rotY);
-                    const forwardZ = Math.cos(player.rotY);
-                    const rightX = Math.sin(player.rotY + Math.PI / 2);
-                    const rightZ = Math.cos(player.rotY + Math.PI / 2);
-
+                    moveX /= len; moveZ /= len;
+                    const forwardX = Math.sin(player.rotY), forwardZ = Math.cos(player.rotY);
+                    const rightX = Math.sin(player.rotY + Math.PI / 2), rightZ = Math.cos(player.rotY + Math.PI / 2);
                     const nx = player.x + (forwardX * -moveZ + rightX * moveX) * moveSpeed * dt;
                     const nz = player.z + (forwardZ * -moveZ + rightZ * moveX) * moveSpeed * dt;
+                    if (Math.abs(nx) < 140 && Math.abs(nz) < 140) { player.x = nx; player.z = nz; }
 
-                    if (Math.abs(nx) < 140 && Math.abs(nz) < 140) {
-                        player.x = nx;
-                        player.z = nz;
-                    }
+                    const stepInterval = (keys.shift || state.isRunning) ? 0.34 : 0.54;
+                    if (elapsed - lastStepTime > stepInterval) { lastStepTime = elapsed; playFootstep(); }
                 }
 
-                // Follow exact terrain elevation smoothly
                 const groundElevation = getTerrainHeight(player.x, player.z);
+                const eyeOffset = state.sittingBench ? 1.15 : 1.72;
                 const bobbing = (moveX !== 0 || moveZ !== 0) ? Math.sin(elapsed * (keys.shift ? 13 : 8)) * 0.05 : 0;
-                camera.position.x = player.x;
-                camera.position.z = player.z;
-                camera.position.y = THREE.MathUtils.lerp(camera.position.y, groundElevation + 1.72 + bobbing, 0.25);
 
-                // Keep sky dome centered on player
+                camera.position.x = player.x; camera.position.z = player.z;
+                camera.position.y = THREE.MathUtils.lerp(camera.position.y, groundElevation + eyeOffset + bobbing, 0.25);
                 skyDome.position.set(player.x, 0, player.z);
 
                 const targetLook = new THREE.Vector3(
@@ -2059,7 +1839,6 @@
                 );
                 camera.lookAt(targetLook);
 
-                // Rain animation
                 if (rainSystem.visible) {
                     rainSystem.position.set(player.x, 0, player.z);
                     const positions = rainGeo.attributes.position.array;
@@ -2070,55 +1849,52 @@
                     rainGeo.attributes.position.needsUpdate = true;
                 }
 
-                // Proximity Interaction Prompts
+                // Interaction Prompts
                 let promptText = "";
                 if (state.isNight && state.weatherMode === 0) {
                     const raycaster = new THREE.Raycaster();
                     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-                    const intersects = raycaster.intersectObjects(constellationsGroup.children);
+                    const starNodes = constellationsGroup.children.filter(c => c.type === 'Mesh');
+                    const intersects = raycaster.intersectObjects(starNodes);
                     if (intersects.length > 0) {
-                        promptText = "Press [E] to Inspect Constellation";
+                        const cObj = intersects[0].object.userData.constellation;
+                        promptText = `Press [E] to Trace Star in ${cObj.name}`;
                     }
                 }
-
                 if (!promptText) {
                     for (let item of interactables) {
-                        if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.6) {
-                            promptText = item.type === 'wood' ? "Press [E] to Gather Wood" : `Press [E] to Forage ${item.itemData.name}`;
+                        if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.7) {
+                            if (item.type === 'wood') promptText = "Press [E] to Gather Wood";
+                            else if (item.type === 'forage') promptText = `Press [E] to Forage ${item.itemData.name}`;
+                            else if (item.type === 'page') promptText = `Press [E] to Collect ${item.pageData.pageTitle}`;
                             break;
                         }
                     }
                 }
-
-                if (!promptText && Math.abs(player.x) < 6.5 && Math.abs(player.z) < 150) {
-                    promptText = "Press [E] to Collect Stream Water";
+                if (!promptText) {
+                    for (let s of state.structures) {
+                        if (Math.hypot(player.x - s.mesh.position.x, player.z - s.mesh.position.z) < 2.8) {
+                            promptText = s.type === 'bench' ? "Press [E] to Sit & Contemplate  |  [X] Dismantle" : "Press [X] to Dismantle Lantern";
+                            break;
+                        }
+                    }
                 }
-
-                if (!promptText && tentMesh && Math.hypot(player.x - tentMesh.position.x, player.z - tentMesh.position.z) < 3.0) {
-                    promptText = "Press [E] to Sleep in Tent";
-                }
-
+                if (!promptText && Math.abs(player.x) < 6.5 && Math.abs(player.z) < 150) { promptText = "Press [E] to Collect Stream Water"; }
+                if (!promptText && tentMesh && Math.hypot(player.x - tentMesh.position.x, player.z - tentMesh.position.z) < 3.0) { promptText = "Press [E] to Sleep in Tent"; }
                 if (!promptText && campfireMesh && Math.hypot(player.x - campfireMesh.position.x, player.z - campfireMesh.position.z) < 3.0) {
-                    promptText = state.fireLit ? "Press [E] to Add Wood to Fire" : "Press [E] to Light Campfire";
+                    promptText = state.fireLit ? "Press [E] to Stoke Campfire" : "Press [E] to Light Campfire";
                 }
 
                 const promptEl = document.getElementById('interaction-prompt');
-                if (promptText) {
-                    promptEl.innerText = promptText;
-                    promptEl.classList.add('visible');
-                } else {
-                    promptEl.classList.remove('visible');
-                }
+                if (promptText && !state.sittingBench) {
+                    promptEl.innerText = promptText; promptEl.classList.add('visible');
+                } else { promptEl.classList.remove('visible'); }
 
                 drawMinimap();
                 updateHUD();
             }
 
-            if (composer) {
-                composer.render();
-            } else {
-                renderer.render(scene, camera);
-            }
+            if (composer) composer.render(); else renderer.render(scene, camera);
         }
 
         window.addEventListener('resize', () => {
