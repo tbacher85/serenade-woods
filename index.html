@@ -135,13 +135,14 @@
                 <div class="stats-grid">
                     <div class="stat-item">Time: <span id="hud-time">13:00</span></div>
                     <div class="stat-item">Weather: <span id="hud-weather">Clear ☀️</span></div>
-                    <div class="stat-item">Wood: <span id="hud-wood">0</span></div>
+                    <div class="stat-item">Wood: <span id="hud-wood">5</span></div>
                     <div class="stat-item">Stamina: <span id="hud-stamina">100%</span></div>
                 </div>
             </div>
             <div class="controls-panel">
                 <button class="btn interactive" id="btn-journal">📖 Journal [J]</button>
                 <button class="btn interactive" id="btn-binoculars">🔭 Spyglass [B]</button>
+                <button class="btn interactive" id="btn-weather">🌤️ Weather</button>
                 <button class="btn interactive" id="btn-mute">Audio: ON</button>
             </div>
         </div>
@@ -247,9 +248,9 @@
         const state = {
             gameStarted: false,
             timeOfDay: 13.5,
-            timeSpeed: 0.03,
+            timeSpeed: 0.04,
             isNight: false,
-            weatherMode: 0,
+            weatherMode: 0, // 0: Clear, 1: Rain, 2: Fog
             woodCount: 5,
             hasWater: false,
             stamina: 100,
@@ -277,7 +278,7 @@
         // =========================================================================
         // 3. AUDIO SYSTEM & DIEGETIC SOUNDS
         // =========================================================================
-        let audioCtx = null, ambientGain = null, streamGain = null, fireGain = null;
+        let audioCtx = null, ambientGain = null, streamGain = null, fireGain = null, rainGain = null;
 
         function initAudio() {
             if (audioCtx) return;
@@ -306,6 +307,14 @@
             fireGain = audioCtx.createGain(); fireGain.gain.value = 0;
             fireSrc.connect(fireFilter); fireFilter.connect(fireGain); fireGain.connect(ambientGain);
             fireSrc.start();
+
+            const rainSrc = audioCtx.createBufferSource();
+            rainSrc.buffer = noiseBuf; rainSrc.loop = true;
+            const rainFilter = audioCtx.createBiquadFilter();
+            rainFilter.type = 'highpass'; rainFilter.frequency.value = 800;
+            rainGain = audioCtx.createGain(); rainGain.gain.value = 0;
+            rainSrc.connect(rainFilter); rainFilter.connect(rainGain); rainGain.connect(ambientGain);
+            rainSrc.start();
         }
 
         function playSound(type) {
@@ -394,16 +403,30 @@
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // Water Stream
+        // Flowing Water Stream
         const waterUniforms = { uTime: { value: 0 }, uSunDir: { value: new THREE.Vector3(0.4, 0.7, 0.3).normalize() }, uWaterColor: { value: new THREE.Color(0x0c4a6e) }, uShallowColor: { value: new THREE.Color(0x38bdf8) }, uNightFactor: { value: 0.0 } };
         const streamMat = new THREE.ShaderMaterial({
             uniforms: waterUniforms, transparent: true,
-            vertexShader: `uniform float uTime; varying vec2 vUv; void main() { vUv = uv; vec3 p = position; p.y += sin(p.z * 0.9 + uTime * 2.4 + p.x * 1.5) * 0.045; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }`,
-            fragmentShader: `uniform vec3 uWaterColor, uShallowColor; varying vec2 vUv; void main() { float d = abs(vUv.x - 0.5) * 2.0; gl_FragColor = vec4(mix(uWaterColor, uShallowColor, d), 0.82); }`
+            vertexShader: `uniform float uTime; varying vec2 vUv; void main() { vUv = uv; vec3 p = position; p.y += sin(p.z * 1.2 + uTime * 3.5 + p.x * 2.0) * 0.06; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }`,
+            fragmentShader: `uniform vec3 uWaterColor, uShallowColor; uniform float uTime; varying vec2 vUv; void main() { float flow = sin(vUv.y * 25.0 - uTime * 4.0) * 0.15; float d = abs(vUv.x - 0.5) * 2.0 + flow; gl_FragColor = vec4(mix(uWaterColor, uShallowColor, clamp(d, 0.0, 1.0)), 0.85); }`
         });
         const stream = new THREE.Mesh(new THREE.PlaneGeometry(10.5, 300, 32, 160), streamMat);
         stream.rotation.x = -Math.PI / 2; stream.position.set(0, -0.32, 0);
         scene.add(stream);
+
+        // Rain System
+        const rainGeo = new THREE.BufferGeometry();
+        const rainCount = 1200;
+        const rainPos = new Float32Array(rainCount * 3);
+        for(let i=0; i<rainCount*3; i+=3) {
+            rainPos[i] = (Math.random() - 0.5) * 150;
+            rainPos[i+1] = Math.random() * 50;
+            rainPos[i+2] = (Math.random() - 0.5) * 150;
+        }
+        rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+        const rainMat = new THREE.PointsMaterial({ color: 0xaad2ff, size: 0.35, transparent: true, opacity: 0 });
+        rainSystem = new THREE.Points(rainGeo, rainMat);
+        scene.add(rainSystem);
 
         // Wooden Bridge
         const barkPBR = generatePBRTextureSet('bark', 256);
@@ -417,18 +440,18 @@
         scene.add(bridgeGroup);
 
         // =========================================================================
-        // 5. TREES, FOLIAGE & LANDMARKS
+        // 5. TREES, FLORA & WIND SHADERS
         // =========================================================================
         function applyWindShader(material, sway = 0.25) {
             material.onBeforeCompile = (shader) => {
                 shader.uniforms.uWindTime = { value: 0 };
                 windShaderUniforms.push(shader.uniforms.uWindTime);
                 shader.vertexShader = `uniform float uWindTime;\n` + shader.vertexShader;
-                shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n float hf = max(0.0, position.y);\n float wv = sin(uWindTime * 1.8 + position.x * 0.6) * 0.65;\n transformed.x += wv * ${sway} * hf * 0.22;`);
+                shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n float hf = max(0.0, position.y);\n float wv = sin(uWindTime * 2.2 + position.x * 0.8) * 0.75;\n transformed.x += wv * ${sway} * hf * 0.28;`);
             };
         }
         const foliageMat = new THREE.MeshStandardMaterial({ color: 0x264620, roughness: 0.82 });
-        applyWindShader(foliageMat, 0.32);
+        applyWindShader(foliageMat, 0.35);
         const trunkMat = new THREE.MeshStandardMaterial({ map: barkPBR.map, roughness: 0.9 });
 
         function createPineTree(x, z) {
@@ -460,19 +483,27 @@
             interactables.push({ type: 'page', mesh: pageMesh, x: lm.x, z: lm.z, active: true, pageData: lm.page });
         });
 
-        // Spawn Forageable Herbs & Berries
+        // Spawn Wind-Swaying Herbs & Berries with gorgeous floral geometry
         const herbTemplates = [
-            { name: "Wild Mint Herb", desc: "Aromatic leaves. Brews into invigorating tea.", type: 'herb' },
+            { name: "Wild Mint Herb", desc: "Aromatic mint leaves. Brews into invigorating tea.", type: 'herb' },
             { name: "Healing Chamomile", desc: "Delicate white petals. Soothes fatigue.", type: 'herb' },
             { name: "Forest Blueberries", desc: "Plump wild berries. Instantly restores stamina.", type: 'berry' }
         ];
-        for (let i = 0; i < 28; i++) {
-            const x = (Math.random() - 0.5) * 130, z = (Math.random() - 0.5) * 130;
+        const floraMat = new THREE.MeshStandardMaterial({ color: 0x4ade80, roughness: 0.6, side: THREE.DoubleSide });
+        applyWindShader(floraMat, 0.5);
+
+        for (let i = 0; i < 35; i++) {
+            const x = (Math.random() - 0.5) * 140, z = (Math.random() - 0.5) * 140;
             if (Math.abs(x) > 7.5) {
                 const gy = getTerrainHeight(x, z), tpl = herbTemplates[Math.floor(Math.random() * herbTemplates.length)];
-                const mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(0.3, 1), new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.7 }));
-                mesh.position.set(x, gy + 0.15, z); scene.add(mesh);
-                interactables.push({ type: 'forage', mesh, x, z, active: true, itemData: tpl });
+                const floraGroup = new THREE.Group();
+                for(let f=0; f<3; f++) {
+                    const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.55, 4), floraMat);
+                    leaf.rotation.z = (f - 1) * 0.35; leaf.position.y = 0.28; leaf.castShadow = true;
+                    floraGroup.add(leaf);
+                }
+                floraGroup.position.set(x, gy, z); scene.add(floraGroup);
+                interactables.push({ type: 'forage', mesh: floraGroup, x, z, active: true, itemData: tpl });
             }
         }
 
@@ -488,21 +519,42 @@
         }
 
         // =========================================================================
-        // 6. AMBIENT WILDLIFE (DEER, FOXES, OWLS)
+        // 6. SCULPTED 3D WILDLIFE (DEER & FOX)
         // =========================================================================
-        function createDeer() {
-            const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: 0xa06538, roughness: 0.8 });
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 1.2), mat); body.position.y = 0.9; body.castShadow = true; g.add(body);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.4), mat); head.position.set(0, 1.5, 0.5); g.add(head);
-            return g;
-        }
-        function createFox() {
-            const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: 0xd95f18, roughness: 0.8 });
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.8), mat); body.position.y = 0.45; body.castShadow = true; g.add(body);
+        function createSculptedDeer() {
+            const g = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.75 });
+            // Torso
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 1.4, 8), mat);
+            torso.rotation.z = Math.PI / 2; torso.position.y = 1.0; torso.castShadow = true; g.add(torso);
+            // Neck & Head
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.8, 6), mat);
+            neck.rotation.x = -Math.PI / 5; neck.position.set(0, 1.35, 0.55); g.add(neck);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.25, 0.45), mat);
+            head.position.set(0, 1.72, 0.75); g.add(head);
+            // Legs
+            for(let px of [-0.25, 0.25]) {
+                for(let pz of [-0.4, 0.4]) {
+                    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.9, 6), mat);
+                    leg.position.set(px, 0.45, pz); leg.castShadow = true; g.add(leg);
+                }
+            }
             return g;
         }
 
-        [ {x: -18, z: 22, fn: createDeer, sp: "Forest Deer"}, {x: 25, z: -20, fn: createFox, sp: "Red Fox"} ].forEach(fa => {
+        function createSculptedFox() {
+            const g = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0xc85a17, roughness: 0.75 });
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.25, 1.0, 8), mat);
+            torso.rotation.z = Math.PI / 2; torso.position.y = 0.55; torso.castShadow = true; g.add(torso);
+            const tail = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.7, 6), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            tail.rotation.x = Math.PI / 3; tail.position.set(0, 0.65, -0.65); g.add(tail);
+            const head = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.35, 6), mat);
+            head.rotation.x = Math.PI / 3; head.position.set(0, 0.78, 0.48); g.add(head);
+            return g;
+        }
+
+        [ {x: -18, z: 22, fn: createSculptedDeer, sp: "Forest Deer"}, {x: 25, z: -20, fn: createSculptedFox, sp: "Red Fox"} ].forEach(fa => {
             const mesh = fa.fn();
             mesh.position.set(fa.x, getTerrainHeight(fa.x, fa.z), fa.z); scene.add(mesh);
             wildlifeEntities.push({ species: fa.sp, mesh, x: fa.x, z: fa.z, dir: Math.random() * Math.PI * 2 });
@@ -518,7 +570,7 @@
         );
         scene.add(starsGroup);
 
-        constellationsGroup = new THREE.Group();
+        const constellationsGroup = new THREE.Group();
         const constellationDefs = [
             { name: "Orion the Hunter", stars: [new THREE.Vector3(100, 280, -250), new THREE.Vector3(130, 260, -240), new THREE.Vector3(115, 230, -260)] },
             { name: "Ursa Major", stars: [new THREE.Vector3(-150, 290, 180), new THREE.Vector3(-130, 275, 195), new THREE.Vector3(-110, 285, 210)] },
@@ -539,16 +591,16 @@
         scene.add(constellationsGroup);
 
         // =========================================================================
-        // 8. INPUT & CONTROLS
+        // 8. INPUT & CONTROLS (WASD + ARROW KEYS)
         // =========================================================================
-        const keys = { w: false, a: false, s: false, d: false, shift: false };
+        const keys = { w: false, a: false, s: false, d: false, up: false, down: false, left: false, right: false, shift: false };
         let isPointerLocked = false;
 
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyW') keys.w = true;
-            if (e.code === 'KeyA') keys.a = true;
-            if (e.code === 'KeyS') keys.s = true;
-            if (e.code === 'KeyD') keys.d = true;
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') { keys.w = true; keys.up = true; }
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') { keys.a = true; keys.left = true; }
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') { keys.s = true; keys.down = true; }
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') { keys.d = true; keys.right = true; }
             if (e.code === 'ShiftLeft') { keys.shift = true; state.isRunning = true; }
             if (e.code === 'KeyE') handleInteraction();
             if (e.code === 'KeyC') takePhoto();
@@ -556,10 +608,10 @@
             if (e.code === 'KeyJ') toggleJournal();
         });
         window.addEventListener('keyup', (e) => {
-            if (e.code === 'KeyW') keys.w = false;
-            if (e.code === 'KeyA') keys.a = false;
-            if (e.code === 'KeyS') keys.s = false;
-            if (e.code === 'KeyD') keys.d = false;
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') { keys.w = false; keys.up = false; }
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') { keys.a = false; keys.left = false; }
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') { keys.s = false; keys.down = false; }
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') { keys.d = false; keys.right = false; }
             if (e.code === 'ShiftLeft') { keys.shift = false; state.isRunning = false; }
         });
 
@@ -699,6 +751,14 @@
             const url = renderer.domElement.toDataURL('image/png');
             state.photos.push(url);
 
+            // Discover wildlife in view
+            wildlifeEntities.forEach(fa => {
+                if (Math.hypot(player.x - fa.x, player.z - fa.z) < 18) {
+                    state.discovered[fa.species] = true;
+                    showNotification(`📷 Photographed ${fa.species}! Logged in Compendium.`);
+                }
+            });
+
             if (state.isNight && campfireMesh && Math.abs(player.x - campfireMesh.position.x) < 8) state.bountiesCompleted["Campfire by Stream"] = true;
             if (state.weatherMode === 0 && Math.abs(player.x - 0) < 5) state.bountiesCompleted["Morning Bridge Mist"] = true;
             if (state.isNight && tentMesh && Math.abs(player.x - tentMesh.position.x) < 6) state.bountiesCompleted["Tent Constellation"] = true;
@@ -734,7 +794,7 @@
                 ];
                 floraList.forEach(f => {
                     const unlocked = state.discovered[f.name];
-                    box.innerHTML += `<div class="entry-card ${unlocked ? '' : 'locked'}"><div class="entry-title"><span>${unlocked ? f.name : '??? Undiscovered'}</span><span>${unlocked ? '✅ Documented' : '🔒 Unseen'}</span></div><div class="entry-desc">${unlocked ? f.desc : 'Explore the alpine woods and forage items to document.'}</div></div>`;
+                    box.innerHTML += `<div class="entry-card ${unlocked ? '' : 'locked'}"><div class="entry-title"><span>${unlocked ? f.name : '??? Undiscovered'}</span><span>${unlocked ? '✅ Documented' : '🔒 Unseen'}</span></div><div class="entry-desc">${unlocked ? f.desc : 'Explore the alpine woods and snap photos or forage to document.'}</div></div>`;
                 });
             } else if (tab === 'bounties') {
                 const bounties = [
@@ -773,6 +833,16 @@
         document.getElementById('btn-journal').addEventListener('click', toggleJournal);
         document.getElementById('close-journal-btn').addEventListener('click', toggleJournal);
         document.getElementById('btn-binoculars').addEventListener('click', toggleBinoculars);
+
+        document.getElementById('btn-weather').addEventListener('click', () => {
+            state.weatherMode = (state.weatherMode + 1) % 3;
+            const names = ["Clear ☀️", "Rain 🌧️", "Dense Fog 🌁"];
+            document.getElementById('hud-weather').innerText = names[state.weatherMode];
+            scene.fog.density = state.weatherMode === 2 ? 0.035 : 0.011;
+            rainSystem.material.opacity = state.weatherMode === 1 ? 0.85 : 0;
+            if (rainGain) rainGain.gain.value = state.weatherMode === 1 ? 0.25 : 0;
+            showNotification(`Weather changed to: ${names[state.weatherMode]}`);
+        });
 
         // =========================================================================
         // 11. UI & CRAFTING BUTTONS
@@ -862,12 +932,14 @@
                 sunLight.intensity = 0.04; hemiLight.intensity = 0.14;
                 skyUniforms.topColor.value.setHex(0x02040a); skyUniforms.horizonColor.value.setHex(0x09111e);
                 skyUniforms.nightFactor.value = 1.0; waterUniforms.uNightFactor.value = 1.0;
-                scene.fog.color.setHex(0x060b14); starsGroup.material.opacity = 0.95; constellationsGroup.visible = true;
+                if(state.weatherMode !== 2) scene.fog.color.setHex(0x060b14);
+                starsGroup.material.opacity = 0.95; constellationsGroup.visible = true;
             } else {
                 sunLight.intensity = 1.35; hemiLight.intensity = 0.6;
                 skyUniforms.topColor.value.setHex(0x1d63b8); skyUniforms.horizonColor.value.setHex(0xa6d5fa);
                 skyUniforms.nightFactor.value = 0.0; waterUniforms.uNightFactor.value = 0.0;
-                scene.fog.color.setHex(0x9ac9f0); starsGroup.material.opacity = 0; constellationsGroup.visible = false;
+                if(state.weatherMode !== 2) scene.fog.color.setHex(0x9ac9f0);
+                starsGroup.material.opacity = 0; constellationsGroup.visible = false;
             }
         }
 
@@ -882,6 +954,15 @@
 
             waterUniforms.uTime.value = elapsed;
             for (let u of windShaderUniforms) u.value = elapsed;
+
+            if (state.weatherMode === 1 && rainSystem) {
+                const pos = rainSystem.geometry.attributes.position.array;
+                for(let i=1; i<pos.length; i+=3) {
+                    pos[i] -= 35 * dt;
+                    if(pos[i] < 0) pos[i] = 45;
+                }
+                rainSystem.geometry.attributes.position.needsUpdate = true;
+            }
 
             if (state.activity) {
                 state.activity.progress += state.activity.dir * 70 * dt;
@@ -916,7 +997,10 @@
 
                 let speed = player.speed * ((keys.shift || state.isRunning) ? player.runMultiplier : 1.0);
                 let mx = 0, mz = 0;
-                if (keys.w) mz -= 1; if (keys.s) mz += 1; if (keys.a) mx -= 1; if (keys.d) mx += 1;
+                if (keys.w || keys.up) mz -= 1; 
+                if (keys.s || keys.down) mz += 1; 
+                if (keys.a || keys.left) mx -= 1; 
+                if (keys.d || keys.right) mx += 1;
 
                 if (mx !== 0 || mz !== 0) {
                     const l = Math.hypot(mx, mz); mx /= l; mz /= l;
@@ -929,6 +1013,7 @@
                 const gy = getTerrainHeight(player.x, player.z);
                 camera.position.set(player.x, gy + 1.72, player.z);
                 skyDome.position.set(player.x, 0, player.z);
+                if(rainSystem) rainSystem.position.set(player.x, 0, player.z);
 
                 camera.lookAt(new THREE.Vector3(
                     player.x + Math.sin(player.rotY) * 10,
