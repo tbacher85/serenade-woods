@@ -28,7 +28,6 @@
             left: 0;
             z-index: 1;
         }
-        /* Cinematic Vignette & Binoculars HUD */
         #cinematic-vignette {
             position: absolute;
             top: 0;
@@ -249,7 +248,6 @@
             color: #94a3b8;
         }
 
-        /* Overlays & Modals */
         .overlay-screen {
             position: absolute;
             top: 0;
@@ -324,7 +322,6 @@
             box-shadow: 0 15px 30px rgba(2, 132, 199, 0.65);
         }
 
-        /* Field Journal & Compendium Book Modal */
         .modal-screen {
             display: none;
             position: absolute;
@@ -434,7 +431,6 @@
             border: 1px solid rgba(255,255,255,0.15);
         }
     </style>
-    <!-- Three.js Core & Post-Processing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
@@ -450,7 +446,6 @@
     <div id="spyglass-hud"></div>
     <div id="notification-banner">Notification</div>
 
-    <!-- Start Screen Overlay -->
     <div id="start-screen" class="overlay-screen">
         <h1>Serenade Woods</h1>
         <p>Cinematic Alpine Wilderness & Field Naturalist Engine featuring procedural PBR terrain, wind-swaying botanicals, skittish 3D wildlife, interactive stargazing compendium, spyglass binoculars, and photo album bounties.</p>
@@ -467,7 +462,6 @@
         <button class="primary-btn interactive" id="start-btn">Enter Wilderness</button>
     </div>
 
-    <!-- Field Naturalist's Journal Modal -->
     <div id="journal-modal" class="modal-screen interactive">
         <div class="journal-book">
             <div class="journal-header">
@@ -485,7 +479,6 @@
         </div>
     </div>
 
-    <!-- Main UI Layer -->
     <div id="ui-layer">
         <div class="top-bar">
             <div class="panel">
@@ -527,14 +520,9 @@
     </div>
 
     <script>
-        // =========================================================================
-        // 0. EXACT TERRAIN ELEVATION FUNCTION (PREVENTS FLOATING OBJECTS)
-        // =========================================================================
         function getTerrainHeight(x, z) {
             const distFromCenter = Math.abs(x);
-            if (distFromCenter < 5.0) {
-                return -0.65;
-            }
+            if (distFromCenter < 5.0) return -0.65;
             let bankFactor = 1.0;
             if (distFromCenter < 11.0) {
                 const t = (distFromCenter - 5.0) / 6.0;
@@ -545,9 +533,6 @@
             return THREE.MathUtils.lerp(-0.65, hill, bankFactor);
         }
 
-        // =========================================================================
-        // 1. PROCEDURAL PBR TEXTURE GENERATOR
-        // =========================================================================
         function hash2D(x, y) {
             const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
             return n - Math.floor(n);
@@ -645,15 +630,12 @@
             return { map, roughnessMap, normalMap };
         }
 
-        // =========================================================================
-        // GAME STATE & COMPENDIUM PROGRESSION
-        // =========================================================================
         const state = {
             gameStarted: false,
             timeOfDay: 13.5,
             timeSpeed: 0.04,
             isNight: false,
-            weatherMode: 0, // 0: Clear, 1: Rain, 2: Fog
+            weatherMode: 0,
             woodCount: 0,
             hasWater: false,
             stamina: 100,
@@ -673,12 +655,9 @@
 
         const player = { x: 12, z: 24, y: 0, rotY: Math.PI, pitch: 0, speed: 4.5, runMultiplier: 1.85 };
         let interactables = [], trees = [], wildlifeEntities = [];
-        let campfireMesh = null, campfireLight = null, tentMesh = null, rainSystem = null;
+        let campfireMesh = null, campfireLight = null, tentMesh = null;
         let windShaderUniforms = [];
 
-        // =========================================================================
-        // WEB AUDIO API SOUNDSCAPE
-        // =========================================================================
         let audioCtx = null, ambientGain = null;
 
         function initAudio() {
@@ -726,9 +705,6 @@
             }
         }
 
-        // =========================================================================
-        // THREE.SCENE & POST-PROCESSING
-        // =========================================================================
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x88b4dc, 0.011);
@@ -752,7 +728,6 @@
             composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.45, 0.65, 0.82));
         }
 
-        // Rayleigh Sky Dome
         const skyUniforms = {
             topColor: { value: new THREE.Color(0x1e64b4) },
             horizonColor: { value: new THREE.Color(0xa8d4f5) },
@@ -775,7 +750,6 @@
         sunLight.shadow.mapSize.width = sunLight.shadow.mapSize.height = 2048;
         scene.add(sunLight);
 
-        // Ground with PBR Maps
         const groundPBR = generatePBRTextureSet('ground', 256);
         [groundPBR.map, groundPBR.roughnessMap, groundPBR.normalMap].forEach(t => t.repeat.set(45, 45));
         const groundGeo = new THREE.PlaneGeometry(300, 300, 128, 128);
@@ -790,18 +764,16 @@
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // Water Stream with Shader
         const waterUniforms = { uTime: { value: 0 }, uSunDir: { value: new THREE.Vector3(0.4, 0.7, 0.3).normalize() }, uWaterColor: { value: new THREE.Color(0x0c4a6e) }, uShallowColor: { value: new THREE.Color(0x38bdf8) }, uNightFactor: { value: 0.0 } };
         const streamMat = new THREE.ShaderMaterial({
             uniforms: waterUniforms, transparent: true,
             vertexShader: `uniform float uTime; varying vec2 vUv; void main() { vUv = uv; vec3 p = position; p.y += sin(p.z * 0.9 + uTime * 2.4 + p.x * 1.5) * 0.045; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }`,
-            fragmentShader: `uniform vec3 uWaterColor, uShallowColor; uniform float uTime; varying vec2 vUv; void main() { float d = abs(vUv.x - 0.5) * 2.0; gl_FragColor = vec4(mix(uWaterColor, uShallowColor, 0.5), 0.85); }`
+            fragmentShader: `uniform vec3 uWaterColor, uShallowColor; uniform float uTime; varying vec2 vUv; void main() { gl_FragColor = vec4(mix(uWaterColor, uShallowColor, 0.5), 0.85); }`
         });
         const stream = new THREE.Mesh(new THREE.PlaneGeometry(10.5, 300, 32, 160), streamMat);
         stream.rotation.x = -Math.PI / 2; stream.position.set(0, -0.32, 0);
         scene.add(stream);
 
-        // Wooden Bridge
         const barkPBR = generatePBRTextureSet('bark', 256);
         const plankMat = new THREE.MeshStandardMaterial({ map: barkPBR.map, roughness: 0.85 });
         const bridgeGroup = new THREE.Group();
@@ -812,9 +784,6 @@
         bridgeGroup.position.set(0, getTerrainHeight(7.0, 5), 5);
         scene.add(bridgeGroup);
 
-        // =========================================================================
-        // WIND SHADERS, TREES & BOTANICALS
-        // =========================================================================
         function applyWindShader(material, sway = 0.25) {
             material.onBeforeCompile = (shader) => {
                 shader.uniforms.uWindTime = { value: 0 };
@@ -844,7 +813,6 @@
             if (Math.abs(x) > 8.5) createPineTree(x, z);
         }
 
-        // Landmarks & Lost Journal Pages
         const landmarks = [
             { name: "Ancient Standing Stones", x: 45, z: -40, page: { title: "Page I — The Solstice Monoliths", text: "Granite monoliths aligned precisely with northern star Polaris." } },
             { name: "Abandoned Watchtower", x: -50, z: -50, page: { title: "Page II — Naturalist's Log", text: "Herds of deer descend to the stream bend just after first dawn." } },
@@ -857,7 +825,6 @@
             interactables.push({ type: 'page', mesh: pageMesh, x: lm.x, z: lm.z, active: true, pageData: lm.page });
         });
 
-        // Forageable Herbs & Wood
         const herbTemplates = [
             { name: "Wild Mint Herb", desc: "Aromatic leaves. Brews into invigorating tea.", type: 'herb' },
             { name: "Healing Chamomile", desc: "Delicate white petals. Soothes fatigue.", type: 'herb' },
@@ -886,9 +853,6 @@
             }
         }
 
-        // =========================================================================
-        // 3D WILDLIFE (DEER & FOX)
-        // =========================================================================
         function createDeerMesh() {
             const g = new THREE.Group();
             const mat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.75 });
@@ -913,9 +877,6 @@
             wildlifeEntities.push({ species: fa.sp, mesh, x: fa.x, z: fa.z, dir: Math.random() * Math.PI * 2 });
         });
 
-        // =========================================================================
-        // STARRY NIGHT SKY & CONSTELLATIONS
-        // =========================================================================
         const starsGroup = new THREE.Points(
             new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(Array.from({length: 6000}, () => (Math.random() - 0.5) * 900), 3)),
             new THREE.PointsMaterial({ color: 0xffffff, size: 2.5, transparent: true, opacity: 0, fog: false })
@@ -936,16 +897,12 @@
         });
         scene.add(constellationsGroup); constellationsGroup.visible = false;
 
-        // Rain Weather System
         const rainSystem = new THREE.Points(
             new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(Array.from({length: 2000}, () => (Math.random() - 0.5) * 120), 3)),
             new THREE.PointsMaterial({ color: 0xa5b4fc, size: 0.65, transparent: true, opacity: 0 })
         );
         scene.add(rainSystem);
 
-        // =========================================================================
-        // INPUT CONTROLS (WASD, MOUSE LOCK & BINOCULARS)
-        // =========================================================================
         const keys = { w: false, a: false, s: false, d: false, shift: false };
         let isPointerLocked = false;
 
@@ -981,9 +938,6 @@
             player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
         });
 
-        // =========================================================================
-        // INTERACTION & JOURNAL SYSTEMS
-        // =========================================================================
         function toggleBinoculars() {
             state.binocularsActive = !state.binocularsActive;
             camera.fov = state.binocularsActive ? 22 : 62; camera.updateProjectionMatrix();
@@ -1113,7 +1067,6 @@
             showNotification("📷 Photo captured and added to Field Journal Album!");
         }
 
-        // Action Buttons
         document.getElementById('action-tent').addEventListener('click', () => {
             if (!state.tentBuilt) {
                 tentMesh = new THREE.Group();
@@ -1228,7 +1181,6 @@
             }
         }
 
-        // Minimap
         const minimapCtx = document.getElementById('minimap-canvas').getContext('2d');
         function drawMinimap() {
             minimapCtx.clearRect(0, 0, 130, 130);
@@ -1237,7 +1189,6 @@
             minimapCtx.fillStyle = '#f43f5e'; minimapCtx.beginPath(); minimapCtx.arc(65, 65, 4, 0, Math.PI * 2); minimapCtx.fill();
         }
 
-        // Main Animation Loop
         const clock = new THREE.Clock();
 
         function animate() {
