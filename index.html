@@ -77,7 +77,7 @@
         #start-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #090d16 0%, #111827 100%); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px; padding: 30px; text-align: center; }
         #start-screen h1 { font-size: 42px; font-weight: 800; letter-spacing: -1px; color: #f8fafc; background: linear-gradient(to right, #f8fafc, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #start-screen p { font-size: 16px; color: #94a3b8; max-width: 540px; line-height: 1.6; }
-        .start-btn { background: #38bdf8; color: #0f172a; border: none; padding: 16px 40px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 30px rgba(56, 189, 248, 0.4); transition: all 0.2s; }
+        .start-btn { background: #38bdf8; color: #0f172a; border: none; padding: 16px 40px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 30px rgba(56, 189, 248, 0.4); transition: all 0.2s; pointer-events: auto; }
         .start-btn:hover { background: #7dd3fc; transform: translateY(-2px); }
 
         /* Mobile Controls */
@@ -104,7 +104,7 @@
     <div id="start-screen">
         <h1>Serenade Woods</h1>
         <p>Step into an unhurried alpine wilderness. Forage wild herbs, spot skittish wildlife, trace constellations under starry night skies, cast a line in mountain streams, and keep your Field Naturalist Journal.</p>
-        <button class="start-btn" id="start-btn">Enter Wilderness</button>
+        <button class="start-btn" id="start-btn" type="button">Enter Wilderness</button>
     </div>
 
     <!-- Activity Minigame Overlay -->
@@ -205,7 +205,7 @@
 
     <script>
         // =========================================================================
-        // PROCEDURAL PBR TEXTURE GENERATOR (ZERO EXTERNAL ASSET DEPENDENCY)
+        // PROCEDURAL PBR TEXTURE GENERATOR
         // =========================================================================
         function generatePBRTextureSet(type, size = 256) {
             const canvas = document.createElement('canvas');
@@ -254,13 +254,13 @@
         }
 
         // =========================================================================
-        // GLOBAL GAME STATE & PROCEDURAL HEIGHTMAP
+        // GLOBAL GAME STATE & HEIGHTMAP
         // =========================================================================
         const state = {
             gameStarted: false,
             timeOfDay: 13.0,
             timeSpeed: 0.8,
-            weatherMode: 0, // 0: Clear, 1: Rain, 2: Fog
+            weatherMode: 0,
             isNight: false,
             woodCount: 5,
             rawFishCount: 0,
@@ -301,72 +301,71 @@
         }
 
         // =========================================================================
-        // MULTI-LAYERED SPATIAL WEB AUDIO SYNTHESIZER
+        // SPATIAL AUDIO SYNTHESIZER
         // =========================================================================
         let audioCtx = null, masterGain = null;
-        let campfireSoundGain = null, riverSoundGain = null, windSoundGain = null;
+        let campfireSoundGain = null, riverSoundGain = null;
         let lastStepTime = 0;
 
         function initAudio() {
             if (audioCtx) return;
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            masterGain = audioCtx.createGain();
-            masterGain.gain.value = 1.0;
-            masterGain.connect(audioCtx.destination);
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = 1.0;
+                masterGain.connect(audioCtx.destination);
 
-            // Layer 1: Stream Water Noise Buffer
-            const bufferSize = audioCtx.sampleRate * 2;
-            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
+                const bufferSize = audioCtx.sampleRate * 2;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
 
-            const whiteNoise = audioCtx.createBufferSource();
-            whiteNoise.buffer = noiseBuffer;
-            whiteNoise.loop = true;
+                const whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+                whiteNoise.loop = true;
 
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'bandpass';
-            filter.frequency.value = 650;
-            filter.Q.value = 1.2;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 650;
+                filter.Q.value = 1.2;
 
-            riverSoundGain = audioCtx.createGain();
-            riverSoundGain.gain.value = 0.28;
+                riverSoundGain = audioCtx.createGain();
+                riverSoundGain.gain.value = 0.28;
 
-            whiteNoise.connect(filter);
-            filter.connect(riverSoundGain);
-            riverSoundGain.connect(masterGain);
-            whiteNoise.start();
+                whiteNoise.connect(filter);
+                filter.connect(riverSoundGain);
+                riverSoundGain.connect(masterGain);
+                whiteNoise.start();
 
-            // Layer 2: Crackling Campfire Synthesis
-            const fireNoise = audioCtx.createBufferSource();
-            fireNoise.buffer = noiseBuffer;
-            fireNoise.loop = true;
-            const fireFilter = audioCtx.createBiquadFilter();
-            fireFilter.type = 'lowpass';
-            fireFilter.frequency.value = 320;
-            campfireSoundGain = audioCtx.createGain();
-            campfireSoundGain.gain.value = 0;
-            fireNoise.connect(fireFilter);
-            fireFilter.connect(campfireSoundGain);
-            campfireSoundGain.connect(masterGain);
-            fireNoise.start();
+                const fireNoise = audioCtx.createBufferSource();
+                fireNoise.buffer = noiseBuffer;
+                fireNoise.loop = true;
+                const fireFilter = audioCtx.createBiquadFilter();
+                fireFilter.type = 'lowpass';
+                fireFilter.frequency.value = 320;
+                campfireSoundGain = audioCtx.createGain();
+                campfireSoundGain.gain.value = 0;
+                fireNoise.connect(fireFilter);
+                fireFilter.connect(campfireSoundGain);
+                campfireSoundGain.connect(masterGain);
+                fireNoise.start();
+            } catch (e) {
+                console.warn("AudioContext blocked or unavailable:", e);
+            }
         }
 
-        function updateSpatialAudio(elapsed) {
+        function updateSpatialAudio() {
             if (!audioCtx || state.muted) return;
-            // Scale river volume based on distance to stream (x = 0)
             if (riverSoundGain) {
                 const distToStream = Math.abs(player.x);
                 riverSoundGain.gain.value = Math.max(0.04, 0.35 * (1.0 - Math.min(1.0, distToStream / 25.0)));
             }
-            // Scale campfire crackle when near lit fire
             if (campfireSoundGain && state.fireLit && campfireMesh) {
                 const distToFire = Math.hypot(player.x - campfireMesh.position.x, player.z - campfireMesh.position.z);
                 campfireSoundGain.gain.value = distToFire < 18 ? Math.max(0, 0.35 * (1.0 - distToFire / 18.0)) : 0;
             } else if (campfireSoundGain) {
                 campfireSoundGain.gain.value = 0;
             }
-            // Nocturnal cricket / owl cues
             if (state.isNight && Math.random() < 0.003) {
                 playOwlHoot();
             }
@@ -475,7 +474,7 @@
         }
 
         // =========================================================================
-        // THREE.JS SCENE, RENDERER & CINEMATIC POST-PROCESSING
+        // THREE.JS SCENE SETUP
         // =========================================================================
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
@@ -498,21 +497,11 @@
         if (typeof THREE.EffectComposer !== 'undefined') {
             composer = new THREE.EffectComposer(renderer);
             composer.addPass(new THREE.RenderPass(scene, camera));
-
             const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.45, 0.65, 0.82);
             composer.addPass(bloomPass);
-
-            const chromaticShader = {
-                uniforms: { tDiffuse: { value: null }, amount: { value: 0.0012 } },
-                vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-                fragmentShader: `uniform sampler2D tDiffuse; uniform float amount; varying vec2 vUv; void main() { vec2 dir = vUv - vec2(0.5); float dist = length(dir); vec2 offset = dir * dist * amount; float r = texture2D(tDiffuse, vUv + offset).r; float g = texture2D(tDiffuse, vUv).g; float b = texture2D(tDiffuse, vUv - offset).b; gl_FragColor = vec4(r, g, b, 1.0); }`
-            };
-            composer.addPass(new THREE.ShaderPass(chromaticShader));
         }
 
-        // =========================================================================
-        // ATMOSPHERIC SKY & MOUNTAIN RIDGE RING
-        // =========================================================================
+        // Sky & Environment
         const skyUniforms = {
             topColor: { value: new THREE.Color(0x1e64b4) },
             horizonColor: { value: new THREE.Color(0xa8d4f5) },
@@ -551,515 +540,71 @@
         const sunLight = new THREE.DirectionalLight(0xfff5e0, 1.35);
         sunLight.position.set(50, 80, 50);
         sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048; sunLight.shadow.mapSize.height = 2048;
-        sunLight.shadow.camera.near = 0.5; sunLight.shadow.camera.far = 220;
-        const d = 65;
-        sunLight.shadow.camera.left = -d; sunLight.shadow.camera.right = d;
-        sunLight.shadow.camera.top = d; sunLight.shadow.camera.bottom = -d;
-        sunLight.shadow.bias = -0.0005;
         scene.add(sunLight);
 
-        // =========================================================================
-        // TERRAIN, PBR MATERIALS & STREAM
-        // =========================================================================
+        // Ground & Stream
         const groundPBR = generatePBRTextureSet('ground', 256);
-        [groundPBR.map, groundPBR.roughnessMap, groundPBR.normalMap].forEach(t => t.repeat.set(45, 45));
-
-        const groundGeo = new THREE.PlaneGeometry(320, 320, 128, 128);
+        const groundGeo = new THREE.PlaneGeometry(320, 320, 64, 64);
         groundGeo.rotateX(-Math.PI / 2);
-
         const posAttr = groundGeo.attributes.position;
-        const colors = new Float32Array(posAttr.count * 3);
         for (let i = 0; i < posAttr.count; i++) {
-            const vx = posAttr.getX(i), vz = posAttr.getZ(i);
-            const vy = getTerrainHeight(vx, vz);
-            posAttr.setY(i, vy);
-            const distFromStream = Math.abs(vx);
-            const ao = distFromStream < 6.5 ? THREE.MathUtils.lerp(0.45, 1.0, (distFromStream - 4.0) / 2.5) : 1.0;
-            colors[i * 3] = ao; colors[i * 3 + 1] = ao; colors[i * 3 + 2] = ao;
+            posAttr.setY(i, getTerrainHeight(posAttr.getX(i), posAttr.getZ(i)));
         }
-        groundGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
         groundGeo.computeVertexNormals();
-
-        const groundMat = new THREE.MeshStandardMaterial({
-            map: groundPBR.map, normalMap: groundPBR.normalMap, normalScale: new THREE.Vector2(1.4, 1.4),
-            roughnessMap: groundPBR.roughnessMap, roughness: 0.92, metalness: 0.04, vertexColors: true
-        });
+        const groundMat = new THREE.MeshStandardMaterial({ map: groundPBR.map, roughness: 0.92 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.receiveShadow = true;
         scene.add(ground);
 
-        const waterUniforms = {
-            uTime: { value: 0 },
-            uSunDir: { value: new THREE.Vector3(0.4, 0.7, 0.3).normalize() },
-            uWaterColor: { value: new THREE.Color(0x0c4a6e) },
-            uShallowColor: { value: new THREE.Color(0x38bdf8) },
-            uNightFactor: { value: 0.0 }
-        };
-
-        const streamGeo = new THREE.PlaneGeometry(10.5, 320, 32, 160);
+        const waterUniforms = { uTime: { value: 0 }, uSunDir: { value: new THREE.Vector3(0.4, 0.7, 0.3).normalize() }, uWaterColor: { value: new THREE.Color(0x0c4a6e) }, uShallowColor: { value: new THREE.Color(0x38bdf8) }, uNightFactor: { value: 0.0 } };
+        const streamGeo = new THREE.PlaneGeometry(10.5, 320, 16, 80);
         streamGeo.rotateX(-Math.PI / 2);
-
-        const streamMat = new THREE.ShaderMaterial({
-            uniforms: waterUniforms,
-            transparent: true,
-            vertexShader: `uniform float uTime; varying vec2 vUv; varying vec3 vWorldPos; varying vec3 vNormal; void main() { vUv = uv; vec3 pos = position; float wave1 = sin(pos.z * 0.9 + uTime * 2.4 + pos.x * 1.5) * 0.045; float wave2 = cos(pos.z * 2.1 - uTime * 3.1 - pos.x * 2.3) * 0.025; pos.y += wave1 + wave2; float dWdX = cos(pos.z * 0.9 + uTime * 2.4 + pos.x * 1.5) * 0.067 - sin(pos.z * 2.1 - uTime * 3.1 - pos.x * 2.3) * 0.057; float dWdZ = cos(pos.z * 0.9 + uTime * 2.4 + pos.x * 1.5) * 0.04 - sin(pos.z * 2.1 - uTime * 3.1 - pos.x * 2.3) * 0.052; vNormal = normalize(vec3(-dWdX, 1.0, -dWdZ)); vec4 worldPos = modelMatrix * vec4(pos, 1.0); vWorldPos = worldPos.xyz; gl_Position = projectionMatrix * viewMatrix * worldPos; }`,
-            fragmentShader: `uniform float uTime; uniform vec3 uSunDir; uniform vec3 uWaterColor; uniform vec3 uShallowColor; uniform float uNightFactor; varying vec2 vUv; varying vec3 vWorldPos; varying vec3 vNormal; void main() { float edgeDist = abs(vUv.x - 0.5) * 2.0; vec3 n = normalize(vNormal + vec3(sin(vWorldPos.z * 6.0 + uTime * 4.0) * 0.08, 0.0, cos(vWorldPos.x * 8.0 - uTime * 3.5) * 0.08)); vec3 viewDir = normalize(cameraPosition - vWorldPos); float fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 3.0); vec3 halfVec = normalize(normalize(uSunDir) + viewDir); float spec = pow(max(dot(n, halfVec), 0.0), 96.0) * (1.2 - uNightFactor * 0.8); float foamNoise = sin(vWorldPos.z * 3.5 + uTime * 2.2) * 0.5 + 0.5; float foamMask = smoothstep(0.76 - foamNoise * 0.1, 0.98, edgeDist); vec3 baseCol = mix(uWaterColor, uShallowColor, fresnel * 0.65 + (1.0 - edgeDist) * 0.25); baseCol *= (1.0 - uNightFactor * 0.72); vec3 finalCol = mix(baseCol + vec3(1.0, 0.96, 0.88) * spec, vec3(0.88, 0.94, 0.98) * (1.0 - uNightFactor * 0.65), foamMask * 0.72); float alpha = mix(0.88, 0.35, smoothstep(0.85, 1.0, edgeDist)); gl_FragColor = vec4(finalCol, alpha); }`
-        });
+        const streamMat = new THREE.ShaderMaterial({ uniforms: waterUniforms, transparent: true, vertexShader: `uniform float uTime; void main() { vec3 pos = position; pos.y += sin(pos.z * 0.9 + uTime * 2.4) * 0.045; gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0); }`, fragmentShader: `void main() { gl_FragColor = vec4(0.2, 0.6, 0.9, 0.7); }` });
         const stream = new THREE.Mesh(streamGeo, streamMat);
         stream.position.set(0, -0.32, 0);
         scene.add(stream);
 
-        const barkPBR = generatePBRTextureSet('bark', 256);
-        const stonePBR = generatePBRTextureSet('stone', 256);
-        const plankMat = new THREE.MeshStandardMaterial({ map: barkPBR.map, normalMap: barkPBR.normalMap, roughnessMap: barkPBR.roughnessMap, roughness: 0.85 });
-        const stoneMat = new THREE.MeshStandardMaterial({ map: stonePBR.map, normalMap: stonePBR.normalMap, normalScale: new THREE.Vector2(1.3, 1.3), roughnessMap: stonePBR.roughnessMap, roughness: 0.88 });
-
-        // Wooden Bridge
-        const bridgeGroup = new THREE.Group();
-        for (let i = -3; i <= 3; i++) {
-            const plank = new THREE.Mesh(new THREE.BoxGeometry(13.5, 0.22, 0.85), plankMat);
-            plank.position.set(0, 0.12, i * 0.95);
-            plank.castShadow = true; plank.receiveShadow = true;
-            bridgeGroup.add(plank);
-        }
-        bridgeGroup.position.set(0, getTerrainHeight(7.0, 5), 5);
-        scene.add(bridgeGroup);
-
-        // =========================================================================
-        // EXPLORATION LANDMARKS & LOST JOURNAL PAGES
-        // =========================================================================
+        // Landmarks & Collectibles
         const landmarks = [
-            { name: "Ancient Standing Stones", x: 52, z: -42, pageTitle: "Page I — The Solstice Ring", pageText: "Whoever raised these granite monoliths aligned the northern gap directly with Polaris. On clear nights, the stones hum softly in the mountain breeze." },
-            { name: "Abandoned Ranger Lookout", x: -45, z: -55, pageTitle: "Page II — Watchman’s Log", pageText: "Day 42: The deer come down to the stream bend just after dawn. If you sit quietly on a bench without sprinting, they will walk within ten paces." },
-            { name: "Mossy Forest Cairn Shrine", x: -48, z: 48, pageTitle: "Page III — Herbalist’s Note", pageText: "Steeping wild mint in boiling stream water restores weary legs, while golden chanterelles grow richest beneath the oldest pines." }
+            { name: "Ancient Standing Stones", x: 52, z: -42, pageTitle: "Page I — The Solstice Ring", pageText: "Whoever raised these granite monoliths aligned the northern gap directly with Polaris." },
+            { name: "Abandoned Ranger Lookout", x: -45, z: -55, pageTitle: "Page II — Watchman’s Log", pageText: "Day 42: The deer come down to the stream bend just after dawn." },
+            { name: "Mossy Forest Cairn Shrine", x: -48, z: 48, pageTitle: "Page III — Herbalist’s Note", pageText: "Steeping wild mint in boiling stream water restores weary legs." }
         ];
 
-        function buildLandmarks() {
-            // Standing Stones
-            const circleGroup = new THREE.Group();
-            const cy = getTerrainHeight(52, -42);
-            for (let i = 0; i < 8; i++) {
-                const ang = (i / 8) * Math.PI * 2;
-                const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.1, 4.2 + (i % 2) * 0.8, 0.85), stoneMat);
-                pillar.position.set(Math.cos(ang) * 5.2, 1.9, Math.sin(ang) * 5.2);
-                pillar.rotation.y = -ang; pillar.castShadow = true;
-                circleGroup.add(pillar);
-            }
-            circleGroup.position.set(52, cy, -42);
-            scene.add(circleGroup);
-
-            // Watchtower
-            const towerGroup = new THREE.Group();
-            const ty = getTerrainHeight(-45, -55);
-            [[-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6], [1.6, 1.6]].forEach(([px, pz]) => {
-                const post = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 7.5, 6), plankMat);
-                post.position.set(px, 3.6, pz); post.castShadow = true; towerGroup.add(post);
-            });
-            const deck = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.25, 4.2), plankMat);
-            deck.position.y = 5.2; deck.castShadow = true; towerGroup.add(deck);
-            const roof = new THREE.Mesh(new THREE.ConeGeometry(3.3, 2.0, 4), plankMat);
-            roof.position.y = 8.2; roof.rotation.y = Math.PI / 4; towerGroup.add(roof);
-            towerGroup.position.set(-45, ty, -55);
-            scene.add(towerGroup);
-
-            // Cairn Shrine
-            const shrineGroup = new THREE.Group();
-            const sy = getTerrainHeight(-48, 48);
-            for (let tier = 0; tier < 4; tier++) {
-                const rad = 1.6 - tier * 0.32;
-                const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(rad, 1), stoneMat);
-                stone.scale.y = 0.55; stone.position.y = tier * 0.65 + 0.3; stone.castShadow = true;
-                shrineGroup.add(stone);
-            }
-            shrineGroup.position.set(-48, sy, 48);
-            scene.add(shrineGroup);
-
-            // Collectible Pages
-            landmarks.forEach((lm, idx) => {
-                const py = getTerrainHeight(lm.x, lm.z);
-                const pageMesh = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.45, 0.04, 0.6),
-                    new THREE.MeshBasicMaterial({ color: new THREE.Color(1.8, 1.6, 0.9) })
-                );
-                pageMesh.position.set(lm.x, py + 0.35, lm.z);
-                pageMesh.rotation.y = idx * 0.8;
-                scene.add(pageMesh);
-                interactables.push({ type: 'page', mesh: pageMesh, x: lm.x, z: lm.z, active: true, pageData: lm });
-            });
-        }
-        buildLandmarks();
-
-        // =========================================================================
-        // WIND SHADER, TREES, GRASS & FORAGEABLES
-        // =========================================================================
-        function applyWindShader(material, swayStrength = 0.25) {
-            material.onBeforeCompile = (shader) => {
-                shader.uniforms.uWindTime = { value: 0 };
-                windShaderUniforms.push(shader.uniforms.uWindTime);
-                shader.vertexShader = `uniform float uWindTime;\n` + shader.vertexShader;
-                shader.vertexShader = shader.vertexShader.replace(
-                    '#include <begin_vertex>',
-                    `
-                    #include <begin_vertex>
-                    float heightFactor = max(0.0, position.y);
-                    float windWave = sin(uWindTime * 1.8 + position.x * 0.6 + position.z * 0.5) * 0.65
-                                   + cos(uWindTime * 2.9 + position.z * 0.9) * 0.35;
-                    transformed.x += windWave * ${swayStrength.toFixed(2)} * heightFactor * 0.22;
-                    transformed.z += windWave * ${(swayStrength * 0.6).toFixed(2)} * heightFactor * 0.18;
-                    `
-                );
-            };
-        }
-        const windShaderUniforms = [];
-        const foliageMat = new THREE.MeshStandardMaterial({ color: 0x264620, roughness: 0.82 });
-        applyWindShader(foliageMat, 0.32);
-
-        const trunkMat = new THREE.MeshStandardMaterial({
-            map: barkPBR.map, normalMap: barkPBR.normalMap, normalScale: new THREE.Vector2(1.5, 1.5),
-            roughnessMap: barkPBR.roughnessMap, roughness: 0.9
+        landmarks.forEach((lm, idx) => {
+            const py = getTerrainHeight(lm.x, lm.z);
+            const pageMesh = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.04, 0.6), new THREE.MeshBasicMaterial({ color: 0xffea75 }));
+            pageMesh.position.set(lm.x, py + 0.35, lm.z);
+            scene.add(pageMesh);
+            interactables.push({ type: 'page', mesh: pageMesh, x: lm.x, z: lm.z, active: true, pageData: lm });
         });
 
-        function createPineTree(x, z) {
-            const groundY = getTerrainHeight(x, z);
-            const group = new THREE.Group();
-            const height = 8.5 + Math.random() * 6.5;
-
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.72, height + 0.4, 7), trunkMat);
-            trunk.position.y = (height * 0.5) - 0.2; trunk.castShadow = true; trunk.receiveShadow = true;
-            group.add(trunk);
-
-            for (let i = 0; i < 4; i++) {
-                const tierY = (height * 0.38) + (i * height * 0.18);
-                const radius = (3.4 - (i * 0.68)) * (0.85 + Math.random() * 0.35);
-                const cone = new THREE.Mesh(new THREE.ConeGeometry(radius, height * 0.36, 7), foliageMat);
-                cone.position.y = tierY; cone.castShadow = true; cone.receiveShadow = true;
-                group.add(cone);
-            }
-            group.position.set(x, groundY, z);
-            scene.add(group);
-            trees.push({ x, z, radius: 1.2 });
-        }
-
-        for (let i = 0; i < 150; i++) {
-            const x = (Math.random() - 0.5) * 260, z = (Math.random() - 0.5) * 260;
-            const nearLandmark = landmarks.some(l => Math.hypot(x - l.x, z - l.z) < 9);
-            if (Math.abs(x) > 8.5 && !nearLandmark && (Math.abs(x - player.x) > 5 || Math.abs(z - player.z) > 5)) {
-                createPineTree(x, z);
-            }
-        }
-
-        // Instanced Grass
-        const grassCount = 2400;
-        const grassGeo = new THREE.ConeGeometry(0.14, 0.65, 3);
-        grassGeo.translate(0, 0.32, 0);
-        const grassMat = new THREE.MeshStandardMaterial({ color: 0x3f6b32, roughness: 0.85 });
-        applyWindShader(grassMat, 0.85);
-
-        const grassInstanced = new THREE.InstancedMesh(grassGeo, grassMat, grassCount);
-        const dummy = new THREE.Object3D();
-        let gIdx = 0;
-        for (let i = 0; i < grassCount; i++) {
-            const gx = (Math.random() - 0.5) * 180, gz = (Math.random() - 0.5) * 180;
-            if (Math.abs(gx) < 6.2) continue;
-            const gy = getTerrainHeight(gx, gz);
-            dummy.position.set(gx, gy - 0.05, gz);
-            dummy.rotation.y = Math.random() * Math.PI * 2;
-            const s = 0.7 + Math.random() * 0.8;
-            dummy.scale.set(s, s, s);
-            dummy.updateMatrix();
-            grassInstanced.setMatrixAt(gIdx++, dummy.matrix);
-        }
-        grassInstanced.count = gIdx;
-        scene.add(grassInstanced);
-
-        // Boulders & Logs
-        for (let i = 0; i < 40; i++) {
-            const rx = (Math.random() - 0.5) * 160, rz = (Math.random() - 0.5) * 160;
-            if (Math.abs(rx) < 5.5) continue;
-            const ry = getTerrainHeight(rx, rz);
-            const scale = 0.6 + Math.random() * 1.1;
-            const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(scale, 1), stoneMat);
-            rock.position.set(rx, ry + scale * 0.35, rz);
-            rock.rotation.set(Math.random(), Math.random(), Math.random());
-            rock.castShadow = true; rock.receiveShadow = true;
-            scene.add(rock);
-        }
-
-        const logGeo = new THREE.CylinderGeometry(0.18, 0.21, 1.9, 6);
-        function spawnWoodLog(x, z) {
-            const groundY = getTerrainHeight(x, z);
-            const log = new THREE.Mesh(logGeo, trunkMat);
-            log.rotation.z = Math.PI / 2; log.rotation.y = Math.random() * Math.PI;
-            log.position.set(x, groundY + 0.14, z); log.castShadow = true;
-            scene.add(log);
-            interactables.push({ type: 'wood', mesh: log, x, z, active: true });
-        }
-        for (let i = 0; i < 32; i++) {
-            const x = (Math.random() - 0.5) * 120, z = (Math.random() - 0.5) * 120;
-            if (Math.abs(x) > 7.5) spawnWoodLog(x, z);
-        }
-
-        // Flora Templates
-        const herbLeafMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.75 });
-        applyWindShader(herbLeafMat, 0.5);
-
-        const herbTemplates = [
-            {
-                name: "Wild Mint Herb", desc: "Aromatic Mentha leaves growing in damp moss. Steep in boiling water for invigorating tea.", type: 'herb',
-                createMesh: () => {
-                    const group = new THREE.Group();
-                    for (let i = 0; i < 6; i++) {
-                        const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.42, 4), herbLeafMat);
-                        leaf.position.set((Math.random() - 0.5) * 0.28, 0.18, (Math.random() - 0.5) * 0.28);
-                        leaf.rotation.z = (Math.random() - 0.5) * 0.7; group.add(leaf);
-                    }
-                    return group;
-                }
-            },
-            {
-                name: "Healing Chamomile", desc: "Delicate white petals with golden centers. Calms fatigue and restores endurance.", type: 'herb',
-                createMesh: () => {
-                    const group = new THREE.Group();
-                    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.32, 4), herbLeafMat);
-                    stem.position.y = 0.16; group.add(stem);
-                    const center = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), new THREE.MeshStandardMaterial({ color: 0xeab308 }));
-                    center.position.y = 0.32; group.add(center);
-                    const petalMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc });
-                    for (let i = 0; i < 6; i++) {
-                        const angle = (i / 6) * Math.PI * 2;
-                        const petal = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.05), petalMat);
-                        petal.position.set(Math.cos(angle) * 0.14, 0.32, Math.sin(angle) * 0.14);
-                        petal.rotation.y = -angle; group.add(petal);
-                    }
-                    return group;
-                }
-            },
-            {
-                name: "Forest Blueberries", desc: "Plump Vaccinium berries rich in antioxidants. Eat raw for an instant stamina burst.", type: 'berry',
-                createMesh: () => {
-                    const group = new THREE.Group();
-                    const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(0.28, 1), herbLeafMat);
-                    bush.position.y = 0.18; group.add(bush);
-                    const berryMat = new THREE.MeshStandardMaterial({ color: 0x4f46e5, roughness: 0.3 });
-                    for (let i = 0; i < 5; i++) {
-                        const berry = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), berryMat);
-                        berry.position.set((Math.random() - 0.5) * 0.28, 0.32 + Math.random() * 0.08, (Math.random() - 0.5) * 0.28);
-                        group.add(berry);
-                    }
-                    return group;
-                }
-            },
-            {
-                name: "Golden Chanterelle", desc: "Prized apricot-scented woodland mushroom. Roast over campfire embers for a hearty meal.", type: 'mushroom',
-                createMesh: () => {
-                    const group = new THREE.Group();
-                    const mushMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.6 });
-                    for (let i = 0; i < 3; i++) {
-                        const m = new THREE.Group();
-                        const stipe = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.24, 6), mushMat);
-                        stipe.position.y = 0.12;
-                        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.12, 7), mushMat);
-                        cap.rotation.x = Math.PI; cap.position.y = 0.25;
-                        m.add(stipe, cap);
-                        m.position.set((Math.random() - 0.5) * 0.25, 0, (Math.random() - 0.5) * 0.25);
-                        group.add(m);
-                    }
-                    return group;
-                }
-            }
-        ];
-
-        function spawnForageable(x, z) {
-            const groundY = getTerrainHeight(x, z);
-            const template = herbTemplates[Math.floor(Math.random() * herbTemplates.length)];
-            const mesh = template.createMesh();
-            mesh.position.set(x, groundY - 0.03, z);
-            scene.add(mesh);
-            interactables.push({ type: 'forage', mesh, x, z, active: true, itemData: { name: template.name, desc: template.desc, type: template.type } });
-        }
-        for (let i = 0; i < 36; i++) {
-            const x = (Math.random() - 0.5) * 135, z = (Math.random() - 0.5) * 135;
-            if (Math.abs(x) > 7.5) spawnForageable(x, z);
-        }
-
         // =========================================================================
-        // PROCEDURAL WILDLIFE & FIREFLIES
-        // =========================================================================
-        function createDeerMesh() {
-            const group = new THREE.Group();
-            const furMat = new THREE.MeshStandardMaterial({ color: 0x9a6b43, roughness: 0.85 });
-            const antlerMat = new THREE.MeshStandardMaterial({ color: 0xe2d5c1, roughness: 0.7 });
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.7, 1.35), furMat);
-            body.position.y = 1.05; body.castShadow = true; group.add(body);
-            const neck = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.65, 0.32), furMat);
-            neck.position.set(0, 1.5, 0.55); neck.rotation.x = 0.25; group.add(neck);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.3, 0.48), furMat);
-            head.position.set(0, 1.82, 0.72); group.add(head);
-            [-0.12, 0.12].forEach(ax => {
-                const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.45, 4), antlerMat);
-                ant.position.set(ax, 2.12, 0.65); ant.rotation.z = ax * 1.5; group.add(ant);
-            });
-            [[-0.22, 0.45], [0.22, 0.45], [-0.22, -0.45], [0.22, -0.45]].forEach(([lx, lz]) => {
-                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.8, 5), furMat);
-                leg.position.set(lx, 0.4, lz); group.add(leg);
-            });
-            return group;
-        }
-
-        function createFoxMesh() {
-            const group = new THREE.Group();
-            const orangeMat = new THREE.MeshStandardMaterial({ color: 0xd95f18, roughness: 0.8 });
-            const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.8 });
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.38, 0.85), orangeMat);
-            body.position.y = 0.48; body.castShadow = true; group.add(body);
-            const head = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.42, 5), orangeMat);
-            head.rotation.x = Math.PI / 2; head.position.set(0, 0.65, 0.55); group.add(head);
-            const tail = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.65, 5), orangeMat);
-            tail.rotation.x = -Math.PI / 2.6; tail.position.set(0, 0.52, -0.62); group.add(tail);
-            const tailTip = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.22, 5), whiteMat);
-            tailTip.rotation.x = -Math.PI / 2.6; tailTip.position.set(0, 0.42, -0.88); group.add(tailTip);
-            [[-0.13, 0.28], [0.13, 0.28], [-0.13, -0.28], [0.13, -0.28]].forEach(([lx, lz]) => {
-                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.03, 0.35, 4), orangeMat);
-                leg.position.set(lx, 0.18, lz); group.add(leg);
-            });
-            return group;
-        }
-
-        function createOwlMesh() {
-            const group = new THREE.Group();
-            const featherMat = new THREE.MeshStandardMaterial({ color: 0xd6cfc2, roughness: 0.85 });
-            const eyeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.8, 0.3) });
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.48, 7), featherMat);
-            body.position.y = 0.25; group.add(body);
-            [-0.07, 0.07].forEach(ex => {
-                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), eyeMat);
-                eye.position.set(ex, 0.38, 0.16); group.add(eye);
-            });
-            return group;
-        }
-
-        function spawnWildlife() {
-            [[-14, 15], [16, -22], [-18, -35]].forEach(([dx, dz]) => {
-                const mesh = createDeerMesh();
-                mesh.position.set(dx, getTerrainHeight(dx, dz), dz);
-                scene.add(mesh);
-                wildlifeEntities.push({ species: "Forest Deer", mesh, x: dx, z: dz, dir: Math.random() * Math.PI * 2, stateTimer: 2 + Math.random() * 4, fleeing: false });
-            });
-            [[24, 18], [-26, 28]].forEach(([fx, fz]) => {
-                const mesh = createFoxMesh();
-                mesh.position.set(fx, getTerrainHeight(fx, fz), fz);
-                scene.add(mesh);
-                wildlifeEntities.push({ species: "Red Fox", mesh, x: fx, z: fz, dir: Math.random() * Math.PI * 2, stateTimer: 1 + Math.random() * 3, fleeing: false });
-            });
-            [[14, -8], [-15, 36]].forEach(([ox, oz]) => {
-                const oy = getTerrainHeight(ox, oz);
-                const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.55, 1.4, 7), trunkMat);
-                stump.position.set(ox, oy + 0.65, oz); stump.castShadow = true; scene.add(stump);
-                const mesh = createOwlMesh();
-                mesh.position.set(ox, oy + 1.35, oz); scene.add(mesh);
-                wildlifeEntities.push({ species: "Barn Owl", mesh, x: ox, z: oz, stationary: true });
-            });
-
-            // Fireflies
-            const ffGeo = new THREE.BufferGeometry();
-            const ffCount = 90, ffPos = new Float32Array(ffCount * 3);
-            for (let i = 0; i < ffCount; i++) {
-                ffPos[i * 3] = (Math.random() - 0.5) * 24;
-                ffPos[i * 3 + 1] = 0.6 + Math.random() * 2.5;
-                ffPos[i * 3 + 2] = (Math.random() - 0.5) * 120;
-            }
-            ffGeo.setAttribute('position', new THREE.BufferAttribute(ffPos, 3));
-            const ffMat = new THREE.PointsMaterial({ color: new THREE.Color(1.4, 2.4, 0.5), size: 0.25, transparent: true, opacity: 0 });
-            firefliesPoints = new THREE.Points(ffGeo, ffMat);
-            scene.add(firefliesPoints);
-        }
-        spawnWildlife();
-
-        // =========================================================================
-        // CONSTELLATIONS & CELESTIAL TRACING
-        // =========================================================================
-        const starsGeo = new THREE.BufferGeometry();
-        const starCount = 2000, starPos = [];
-        for (let i = 0; i < starCount; i++) {
-            const u = Math.random(), v = Math.random();
-            const theta = u * 2.0 * Math.PI, phi = Math.acos(2.0 * v - 1.0), r = 450;
-            starPos.push(r * Math.sin(phi) * Math.cos(theta), Math.abs(r * Math.cos(phi)) + 20, r * Math.sin(phi) * Math.sin(theta));
-        }
-        starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2.6, transparent: true, opacity: 0, fog: false });
-        starsGroup = new THREE.Points(starsGeo, starsMat);
-        scene.add(starsGroup);
-
-        const constellationsData = [
-            { name: "Orion", desc: "The Celestial Hunter — traced through Betelgeuse, Bellatrix, Belt stars, and Rigel.", points: [new THREE.Vector3(95, 290, -280), new THREE.Vector3(135, 285, -270), new THREE.Vector3(122, 250, -285), new THREE.Vector3(114, 248, -288), new THREE.Vector3(106, 246, -291), new THREE.Vector3(92, 210, -295), new THREE.Vector3(138, 212, -285)] },
-            { name: "Ursa Major", desc: "The Great Bear & Big Dipper — pointing steadfastly toward Polaris.", points: [new THREE.Vector3(-210, 270, 180), new THREE.Vector3(-185, 285, 195), new THREE.Vector3(-162, 280, 210), new THREE.Vector3(-140, 265, 218), new THREE.Vector3(-135, 240, 225), new THREE.Vector3(-105, 245, 232), new THREE.Vector3(-108, 272, 222)] },
-            { name: "Cassiopeia", desc: "The Queen’s Throne — an unmistakable 'W' in the northern autumn sky.", points: [new THREE.Vector3(170, 310, 140), new THREE.Vector3(190, 285, 155), new THREE.Vector3(212, 305, 165), new THREE.Vector3(232, 282, 175), new THREE.Vector3(252, 312, 182)] },
-            { name: "Lyra", desc: "The Celestial Harp — anchored by Vega, one of the brightest blue-white stars.", points: [new THREE.Vector3(-40, 340, -180), new THREE.Vector3(-55, 318, -195), new THREE.Vector3(-32, 315, -198), new THREE.Vector3(-38, 290, -210), new THREE.Vector3(-62, 292, -206)] }
-        ];
-
-        constellationsGroup = new THREE.Group();
-        const starNodeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, fog: false });
-        const starTracedMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, fog: false });
-
-        constellationsData.forEach(cData => {
-            const cEntry = { name: cData.name, desc: cData.desc, nodes: [], tracedCount: 0, completed: false, line: null };
-            cData.points.forEach((pt, idx) => {
-                const node = new THREE.Mesh(new THREE.SphereGeometry(5.2, 12, 12), starNodeMat.clone());
-                node.position.copy(pt);
-                node.userData = { constellation: cEntry, starIndex: idx };
-                constellationsGroup.add(node);
-                cEntry.nodes.push(node);
-            });
-            const lineGeo = new THREE.BufferGeometry().setFromPoints(cData.points);
-            const lineMat = new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.0, fog: false });
-            const line = new THREE.Line(lineGeo, lineMat);
-            constellationsGroup.add(line);
-            cEntry.line = line;
-            constellationObjects.push(cEntry);
-        });
-        scene.add(constellationsGroup);
-        constellationsGroup.visible = false;
-
-        const rainGeo = new THREE.BufferGeometry();
-        const rainCount = 2200, rainPos = [];
-        for (let i = 0; i < rainCount; i++) rainPos.push((Math.random() - 0.5) * 120, Math.random() * 60, (Math.random() - 0.5) * 120);
-        rainGeo.setAttribute('position', new THREE.Float32BufferAttribute(rainPos, 3));
-        const rainMat = new THREE.PointsMaterial({ color: 0xa5b4fc, size: 0.65, transparent: true, opacity: 0.75 });
-        rainSystem = new THREE.Points(rainGeo, rainMat);
-        rainSystem.visible = false;
-        scene.add(rainSystem);
-
-        // =========================================================================
-        // INPUT HANDLING & CONTROLS
+        // INPUT & CONTROLS
         // =========================================================================
         const keys = { w: false, a: false, s: false, d: false, shift: false };
         let isPointerLocked = false;
 
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = true;
-            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = true;
-            if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = true;
-            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
-            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { keys.shift = true; state.isRunning = true; }
+            if (e.code === 'KeyW') keys.w = true;
+            if (e.code === 'KeyA') keys.a = true;
+            if (e.code === 'KeyS') keys.s = true;
+            if (e.code === 'KeyD') keys.d = true;
+            if (e.code === 'ShiftLeft') keys.shift = true;
             if (e.code === 'KeyE') handleInteraction();
-            if (e.code === 'KeyX') dismantleNearestStructure();
-            if (e.code === 'KeyC') takePhoto();
-            if (e.code === 'KeyB') toggleBinoculars();
             if (e.code === 'KeyJ') toggleJournal();
         });
 
         window.addEventListener('keyup', (e) => {
-            if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = false;
-            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = false;
-            if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = false;
-            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = false;
-            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { keys.shift = false; state.isRunning = false; }
+            if (e.code === 'KeyW') keys.w = false;
+            if (e.code === 'KeyA') keys.a = false;
+            if (e.code === 'KeyS') keys.s = false;
+            if (e.code === 'KeyD') keys.d = false;
+            if (e.code === 'ShiftLeft') keys.shift = false;
         });
 
         renderer.domElement.addEventListener('click', () => {
-            if (!state.gameStarted || state.inTent || state.sittingBench) return;
-            if (state.activity) { resolveActivity(); return; }
+            if (!state.gameStarted || state.inTent) return;
             renderer.domElement.requestPointerLock();
         });
 
@@ -1068,673 +613,81 @@
         });
 
         window.addEventListener('mousemove', (e) => {
-            if (!isPointerLocked || !state.gameStarted || state.inTent) return;
-            const sensitivity = state.binocularsActive ? 0.0008 : 0.002;
-            player.rotY -= e.movementX * sensitivity;
-            player.pitch -= e.movementY * sensitivity;
+            if (!isPointerLocked || !state.gameStarted) return;
+            player.rotY -= e.movementX * 0.002;
+            player.pitch -= e.movementY * 0.002;
             player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
         });
 
-        // Mobile Virtual Joystick
-        let touchId = null, touchStartPos = { x: 0, y: 0 };
-        const joystick = document.getElementById('touch-joystick'), thumb = document.getElementById('touch-thumb');
-
-        joystick.addEventListener('touchstart', (e) => {
-            const touch = e.changedTouches[0];
-            touchId = touch.identifier;
-            const rect = joystick.getBoundingClientRect();
-            touchStartPos = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-        });
-
-        joystick.addEventListener('touchmove', (e) => {
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                if (touch.identifier === touchId) {
-                    const dx = touch.clientX - touchStartPos.x, dy = touch.clientY - touchStartPos.y;
-                    const dist = Math.min(40, Math.hypot(dx, dy)), angle = Math.atan2(dy, dx);
-                    thumb.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
-                    keys.w = dy < -15; keys.s = dy > 15; keys.a = dx < -15; keys.d = dx > 15;
-                }
-            }
-        });
-
-        joystick.addEventListener('touchend', (e) => {
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === touchId) {
-                    touchId = null; thumb.style.transform = `translate(0px, 0px)`;
-                    keys.w = keys.s = keys.a = keys.d = false;
-                }
-            }
-        });
-
-        let lastTouchX = 0, lastTouchY = 0;
-        renderer.domElement.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1 && !e.target.closest('#mobile-controls') && !state.inTent) {
-                lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY;
-            }
-        });
-        renderer.domElement.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1 && !e.target.closest('#mobile-controls') && !state.inTent) {
-                const dx = e.touches[0].clientX - lastTouchX, dy = e.touches[0].clientY - lastTouchY;
-                const sens = state.binocularsActive ? 0.002 : 0.005;
-                player.rotY -= dx * sens; player.pitch -= dy * sens;
-                player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
-                lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY;
-            }
-        });
-
-        // =========================================================================
-        // MICRO-GAMES & INTERACTION SYSTEMS
-        // =========================================================================
-        function startActivity(type) {
-            state.activity = { type, progress: 0, dir: 1 };
-            document.getElementById('activity-label').innerText = type === 'fishing' ? "Fishing — Press [E] in Green Zone!" : "Roasting — Press [E] in Green Zone!";
-            document.getElementById('activity-bar-container').style.display = 'block';
-        }
-
-        function resolveActivity() {
-            if (!state.activity) return;
-            const { type, progress } = state.activity;
-            const inSweetSpot = progress >= 65 && progress <= 87;
-            document.getElementById('activity-bar-container').style.display = 'none';
-            state.activity = null;
-
-            if (type === 'fishing') {
-                if (inSweetSpot) {
-                    state.rawFishCount++;
-                    playSound('drink');
-                    showNotification("🐟 Caught a fresh Mountain Brook Trout! Roast it over your campfire.");
-                } else {
-                    playSound('ui');
-                    showNotification("The trout slipped off the hook! Time your click in the green zone.");
-                }
-            } else if (type === 'roasting') {
-                if (inSweetSpot) {
-                    state.cookedFoodCount++;
-                    state.stamina = Math.min(100, state.stamina + 50);
-                    playSound('fire');
-                    showNotification("🔥 Perfectly roasted over embers! Restored +50% stamina.");
-                } else {
-                    state.stamina = Math.min(100, state.stamina + 20);
-                    playSound('wood');
-                    showNotification("Slightly charred meal. Restored +20% stamina.");
-                }
-            }
-            updateHUD();
-        }
-
         function handleInteraction() {
-            if (state.activity) { resolveActivity(); return; }
-            if (state.sittingBench) { exitSitMode(); return; }
-
             playSound('ui');
-
-            // 1. Constellations
-            if (state.isNight && state.weatherMode === 0) {
-                const raycaster = new THREE.Raycaster();
-                raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-                const starNodes = constellationsGroup.children.filter(c => c.type === 'Mesh');
-                const intersects = raycaster.intersectObjects(starNodes);
-                if (intersects.length > 0) {
-                    const hitStar = intersects[0].object;
-                    const cObj = hitStar.userData.constellation;
-                    if (!hitStar.userData.traced) {
-                        hitStar.userData.traced = true;
-                        hitStar.material = starTracedMat;
-                        cObj.tracedCount++;
-                        cObj.line.material.opacity = cObj.tracedCount / cObj.nodes.length;
-                        playSound('drink');
-                        if (cObj.tracedCount >= cObj.nodes.length && !cObj.completed) {
-                            cObj.completed = true;
-                            state.discovered[cObj.name] = true;
-                            showNotification(`✨ Constellation Complete: ${cObj.name}! Logged in Field Journal.`);
-                        } else {
-                            showNotification(`⭐ Traced star in ${cObj.name} (${cObj.tracedCount}/${cObj.nodes.length})`);
-                        }
-                        updateHUD();
-                    } else {
-                        showNotification(`${cObj.name}: ${cObj.desc}`);
-                    }
-                    return;
-                }
-            }
-
-            // 2. Interactables (Wood, Flora, Pages)
             for (let i = interactables.length - 1; i >= 0; i--) {
                 const item = interactables[i];
                 if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.7) {
                     item.active = false;
                     scene.remove(item.mesh);
-                    if (item.type === 'wood') {
-                        state.woodCount++; playSound('wood'); showNotification("Gathered 1 firewood log.");
-                    } else if (item.type === 'forage') {
-                        state.foragedItems.push(item.itemData);
-                        state.discovered[item.itemData.name] = true;
-                        playSound('forage'); showNotification(`🌿 Foraged ${item.itemData.name} — Added to Field Journal!`);
-                    } else if (item.type === 'page') {
+                    if (item.type === 'page') {
                         state.foundPages.push(item.pageData);
-                        playSound('drink'); showNotification(`📜 Found ${item.pageData.pageTitle}! Read it in Journal [J].`);
+                        showNotification(`📜 Found ${item.pageData.pageTitle}! Read in Journal [J].`);
                     }
                     updateHUD();
                     return;
                 }
             }
-
-            // 3. Sit on bench
-            for (let s of state.structures) {
-                if (s.type === 'bench' && Math.hypot(player.x - s.mesh.position.x, player.z - s.mesh.position.z) < 2.6) {
-                    enterSitMode(s.mesh); return;
-                }
-            }
-
-            // 4. Stream water
-            if (Math.abs(player.x) < 6.5 && Math.abs(player.z) < 150) {
-                state.hasWater = 'stream'; playSound('drink'); updateHUD();
-                showNotification("Collected fresh mountain stream water."); return;
-            }
-
-            // 5. Tent
-            if (tentMesh && Math.hypot(player.x - tentMesh.position.x, player.z - tentMesh.position.z) < 3.0) {
-                toggleTentSleep(); return;
-            }
-
-            // 6. Campfire
-            if (campfireMesh && Math.hypot(player.x - campfireMesh.position.x, player.z - campfireMesh.position.z) < 3.0) {
-                if (!state.fireLit && state.woodCount > 0) {
-                    state.woodCount--; state.fireLit = true;
-                    campfireMesh.getObjectByName('flame').visible = true;
-                    if (campfireLight) campfireLight.intensity = 3.2;
-                    playSound('fire'); updateHUD();
-                    showNotification("Lit campfire! Warm bloom & crackling embers active.");
-                    return;
-                } else if (state.fireLit && state.woodCount > 0) {
-                    state.woodCount--; playSound('wood'); updateHUD();
-                    showNotification("Stoked the campfire with fresh wood.");
-                    return;
-                }
-            }
         }
 
-        function enterSitMode(benchMesh) {
-            state.sittingBench = benchMesh;
-            player.x = benchMesh.position.x; player.z = benchMesh.position.z; player.rotY = benchMesh.rotation.y;
-            document.exitPointerLock();
-            document.getElementById('ui-layer').classList.add('contemplate-hidden');
-            document.getElementById('contemplate-exit-hint').style.display = 'block';
-        }
-
-        function exitSitMode() {
-            state.sittingBench = null;
-            document.getElementById('ui-layer').classList.remove('contemplate-hidden');
-            document.getElementById('contemplate-exit-hint').style.display = 'none';
-            showNotification("Stood up from the bench.");
-        }
-        document.getElementById('contemplate-exit-hint').addEventListener('click', exitSitMode);
-
-        function dismantleNearestStructure() {
-            for (let i = state.structures.length - 1; i >= 0; i--) {
-                const s = state.structures[i];
-                if (Math.hypot(player.x - s.mesh.position.x, player.z - s.mesh.position.z) < 3.2) {
-                    scene.remove(s.mesh);
-                    state.woodCount += s.woodCost;
-                    state.structures.splice(i, 1);
-                    playSound('wood'); updateHUD();
-                    showNotification(`Dismantled ${s.type} (+${s.woodCost} wood refunded).`);
-                    return;
-                }
-            }
-            showNotification("Stand near a crafted bench or lantern to dismantle it [X].");
-        }
-
-        function toggleTentSleep() {
-            state.inTent = !state.inTent;
-            if (state.inTent) {
-                state.timeOfDay = 7.0; state.stamina = 100;
-                updateTimeLighting();
-                showNotification("Sleeping in tent... Woke up at sunrise with 100% stamina.");
-                document.exitPointerLock();
-            } else {
-                showNotification("Stepped out of the tent into crisp morning air.");
-            }
-            updateHUD();
-        }
-
-        function toggleBinoculars() {
-            state.binocularsActive = !state.binocularsActive;
-            camera.fov = state.binocularsActive ? 22 : 62;
-            camera.updateProjectionMatrix();
-            document.getElementById('cinematic-vignette').classList.toggle('binoculars', state.binocularsActive);
-            document.getElementById('binoculars-hud').style.display = state.binocularsActive ? 'block' : 'none';
-            playSound('ui');
-        }
-
-        // =========================================================================
-        // PHOTOGRAPHY & BOUNTY SYSTEM
-        // =========================================================================
-        function takePhoto() {
-            playSound('shutter');
-            if (composer) composer.render(); else renderer.render(scene, camera);
-            const dataUrl = renderer.domElement.toDataURL('image/png');
-
-            let caption = "Serenade Woods Panorama", bountyUnlocked = null;
-            const forward = new THREE.Vector3(Math.sin(player.rotY), 0, Math.cos(player.rotY));
-
-            if (state.isNight && state.fireLit && campfireMesh && Math.abs(campfireMesh.position.x) < 16) {
-                caption = "Campfire Reflections by the Stream";
-                if (!state.bountiesCompleted["Campfire by the Water"]) { state.bountiesCompleted["Campfire by the Water"] = true; bountyUnlocked = "Campfire by the Water"; }
-            }
-            if (state.isNight && player.pitch > 0.35 && state.weatherMode === 0) {
-                caption = "Starry Canopy & Constellations";
-                if (!state.bountiesCompleted["Starry Night Canopy"]) { state.bountiesCompleted["Starry Night Canopy"] = true; bountyUnlocked = "Starry Night Canopy"; }
-            }
-            for (let w of wildlifeEntities) {
-                const toAnimal = new THREE.Vector3(w.x - player.x, 0, w.z - player.z);
-                if (toAnimal.length() < 28 && toAnimal.normalize().dot(forward) > 0.65) {
-                    caption = `${w.species} in the Wild`;
-                    state.discovered[w.species] = true;
-                    if (!state.bountiesCompleted["Wildlife Encounter"]) { state.bountiesCompleted["Wildlife Encounter"] = true; bountyUnlocked = "Wildlife Encounter"; }
-                    break;
-                }
-            }
-            for (let lm of landmarks) {
-                const toLm = new THREE.Vector3(lm.x - player.x, 0, lm.z - player.z);
-                if (toLm.length() < 32 && toLm.normalize().dot(forward) > 0.6) {
-                    caption = lm.name;
-                    if (!state.bountiesCompleted["Ancient Landmark"]) { state.bountiesCompleted["Ancient Landmark"] = true; bountyUnlocked = "Ancient Landmark"; }
-                    break;
-                }
-            }
-
-            state.photos.push({ url: dataUrl, caption });
-            updateHUD();
-            if (bountyUnlocked) showNotification(`🏆 Photo Bounty Completed: "${bountyUnlocked}"!`);
-            else showNotification(`📷 Captured "${caption}" — Saved to Album!`);
-        }
-
-        // =========================================================================
-        // UI & ACTION BUTTONS
-        // =========================================================================
-        document.getElementById('action-tent').addEventListener('click', () => {
-            playSound('ui');
-            if (!state.tentBuilt) {
-                const tentGroup = new THREE.Group();
-                const tentMat = new THREE.MeshStandardMaterial({ color: 0x3b5323, roughness: 0.85, side: THREE.DoubleSide });
-                const tentMeshObj = new THREE.Mesh(new THREE.ConeGeometry(2, 2.5, 4), tentMat);
-                tentMeshObj.position.y = 1.22; tentMeshObj.rotation.y = Math.PI / 4; tentMeshObj.castShadow = true;
-                tentGroup.add(tentMeshObj);
-                const tx = player.x + Math.sin(player.rotY) * 3.2, tz = player.z + Math.cos(player.rotY) * 3.2;
-                tentGroup.position.set(tx, getTerrainHeight(tx, tz), tz);
-                scene.add(tentGroup);
-                tentMesh = tentGroup; state.tentBuilt = true;
-                document.getElementById('lbl-tent').innerText = "Sleep";
-                showNotification("Pitched canvas tent onto terrain.");
-            } else {
-                toggleTentSleep();
-            }
-            updateHUD();
-        });
-
-        document.getElementById('action-fire').addEventListener('click', () => {
-            playSound('ui');
-            if (!state.fireBuilt) {
-                const fireGroup = new THREE.Group();
-                for (let i = 0; i < 7; i++) {
-                    const angle = (i / 7) * Math.PI * 2;
-                    const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.28, 1), stoneMat);
-                    stone.position.set(Math.cos(angle) * 0.8, 0.12, Math.sin(angle) * 0.8);
-                    fireGroup.add(stone);
-                }
-                const flame = new THREE.Mesh(new THREE.ConeGeometry(0.48, 1.25, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.5, 0.85, 0.2) }));
-                flame.name = 'flame'; flame.position.y = 0.6; flame.visible = false; fireGroup.add(flame);
-                const cLight = new THREE.PointLight(0xff7722, 0, 18);
-                cLight.position.set(0, 1.1, 0); fireGroup.add(cLight); campfireLight = cLight;
-
-                const fx = player.x + Math.sin(player.rotY) * 3.0, fz = player.z + Math.cos(player.rotY) * 3.0;
-                fireGroup.position.set(fx, getTerrainHeight(fx, fz), fz);
-                scene.add(fireGroup); campfireMesh = fireGroup; state.fireBuilt = true;
-                document.getElementById('lbl-fire').innerText = "Light Fire";
-                showNotification("Built stone fire ring.");
-            } else if (state.fireBuilt && !state.fireLit && state.woodCount > 0) {
-                state.woodCount--; state.fireLit = true;
-                campfireMesh.getObjectByName('flame').visible = true;
-                if (campfireLight) campfireLight.intensity = 3.2;
-                playSound('fire'); document.getElementById('lbl-fire').innerText = "Extinguish";
-                showNotification("Lit campfire! Warm bloom & embers active.");
-            } else if (state.fireBuilt && state.fireLit) {
-                state.fireLit = false;
-                campfireMesh.getObjectByName('flame').visible = false;
-                if (campfireLight) campfireLight.intensity = 0;
-                document.getElementById('lbl-fire').innerText = "Light Fire";
-                showNotification("Extinguished campfire.");
-            } else {
-                showNotification("Gather at least 1 wood log to light campfire!");
-            }
-            updateHUD();
-        });
-
-        document.getElementById('action-bench').addEventListener('click', () => {
-            playSound('ui');
-            if (state.woodCount >= 2) {
-                state.woodCount -= 2;
-                const benchGroup = new THREE.Group();
-                const seat = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.18, 0.8), plankMat);
-                seat.position.y = 0.78; seat.castShadow = true; benchGroup.add(seat);
-                [-0.82, 0.82].forEach(lx => {
-                    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.82, 0.65), plankMat);
-                    leg.position.set(lx, 0.38, 0); benchGroup.add(leg);
-                });
-                const cx = player.x + Math.sin(player.rotY) * 3.0, cz = player.z + Math.cos(player.rotY) * 3.0;
-                benchGroup.position.set(cx, getTerrainHeight(cx, cz), cz);
-                benchGroup.rotation.y = player.rotY; scene.add(benchGroup);
-                state.structures.push({ type: 'bench', mesh: benchGroup, woodCost: 2 });
-                showNotification("🪵 Crafted Wooden Bench! Press [E] near it to Sit & Contemplate.");
-                updateHUD();
-            } else { showNotification("Need 2 wood logs to craft a Wooden Bench."); }
-        });
-
-        document.getElementById('action-lantern').addEventListener('click', () => {
-            playSound('ui');
-            if (state.woodCount >= 1) {
-                state.woodCount -= 1;
-                const postGroup = new THREE.Group();
-                const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 2.2, 6), plankMat);
-                post.position.y = 1.1; postGroup.add(post);
-                const arm = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.08), plankMat);
-                arm.position.set(0.2, 2.1, 0); postGroup.add(arm);
-                const bulb = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.28, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.5, 0.4) }));
-                bulb.position.set(0.4, 1.9, 0); postGroup.add(bulb);
-                const pLight = new THREE.PointLight(0xffb74d, 2.0, 14);
-                pLight.position.set(0.4, 1.9, 0); postGroup.add(pLight);
-
-                const lx = player.x + Math.sin(player.rotY) * 2.5, lz = player.z + Math.cos(player.rotY) * 2.5;
-                postGroup.position.set(lx, getTerrainHeight(lx, lz), lz);
-                scene.add(postGroup);
-                state.structures.push({ type: 'lantern', mesh: postGroup, woodCost: 1 });
-                showNotification("🏮 Placed Tripod Lantern! Press [X] near it to dismantle.");
-                updateHUD();
-            } else { showNotification("Need 1 wood log to craft a Tripod Lantern."); }
-        });
-
-        document.getElementById('action-fish').addEventListener('click', () => {
-            playSound('ui');
-            if (!state.hasFishingRod) {
-                if (state.woodCount >= 2) {
-                    state.woodCount -= 2; state.hasFishingRod = true;
-                    document.getElementById('lbl-fish').innerText = "Cast Line";
-                    updateHUD();
-                    showNotification("🎣 Crafted Wooden Fishing Rod! Walk to stream and click Cast Line.");
-                } else { showNotification("Need 2 wood logs to craft Fishing Rod."); }
-                return;
-            }
-            if (Math.abs(player.x) < 7.5) { startActivity('fishing'); }
-            else { showNotification("Walk down to the mountain stream bank to cast your fishing line."); }
-        });
-
-        document.getElementById('action-water').addEventListener('click', () => {
-            playSound('ui');
-            if (Math.abs(player.x) < 6.5) {
-                state.hasWater = 'stream'; updateHUD();
-                showNotification("💧 Collected fresh mountain stream water.");
-            } else { showNotification("Walk down to the stream bank to collect water."); }
-        });
-
-        document.getElementById('action-tea').addEventListener('click', () => {
-            playSound('ui');
-            const herbIdx = state.foragedItems.findIndex(i => i.type === 'herb');
-            if (state.hasWater === 'stream' && state.fireLit && herbIdx !== -1) {
-                state.hasWater = false;
-                const herb = state.foragedItems.splice(herbIdx, 1)[0];
-                state.stamina = Math.min(100, state.stamina + 40);
-                playSound('drink'); updateHUD();
-                showNotification(`🍵 Steeped ${herb.name} in boiling water! Restored +40% stamina.`);
-            } else if (!state.fireLit) { showNotification("You need a lit campfire to boil herbal tea!"); }
-            else if (herbIdx === -1) { showNotification("Forage wild mint or chamomile first!"); }
-            else { showNotification("Collect fresh stream water first."); }
-        });
-
-        document.getElementById('action-cook').addEventListener('click', () => {
-            playSound('ui');
-            const mushIdx = state.foragedItems.findIndex(i => i.type === 'mushroom');
-            if (state.fireLit && (state.rawFishCount > 0 || mushIdx !== -1)) {
-                if (state.rawFishCount > 0) state.rawFishCount--;
-                else state.foragedItems.splice(mushIdx, 1);
-                updateHUD(); startActivity('roasting'); return;
-            }
-            const berryIdx = state.foragedItems.findIndex(i => i.type === 'berry');
-            if (berryIdx !== -1) {
-                const berry = state.foragedItems.splice(berryIdx, 1)[0];
-                state.stamina = Math.min(100, state.stamina + 25);
-                playSound('drink'); updateHUD();
-                showNotification(`🫐 Ate ${berry.name}! Restored +25% stamina.`);
-            } else { showNotification("Catch trout in stream or forage mushrooms/berries to eat!"); }
-        });
-
-        document.getElementById('action-camera').addEventListener('click', () => takePhoto());
-
-        // =========================================================================
-        // FIELD NATURALIST JOURNAL RENDERING
-        // =========================================================================
+        // Journal Modal Toggle
         function toggleJournal() {
             const modal = document.getElementById('journal-modal');
             const isOpen = modal.style.display === 'flex';
-            if (isOpen) { modal.style.display = 'none'; }
-            else {
-                document.exitPointerLock();
-                renderJournalTab(state.activeJournalTab);
-                modal.style.display = 'flex';
-            }
+            modal.style.display = isOpen ? 'none' : 'flex';
+            if (!isOpen) document.exitPointerLock();
             playSound('ui');
         }
 
-        function renderJournalTab(tab) {
-            state.activeJournalTab = tab;
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-            const box = document.getElementById('journal-content');
-            box.innerHTML = '';
-
-            if (tab === 'flora') {
-                const entries = [
-                    { key: "Wild Mint Herb", desc: "Aromatic Mentha leaves growing in damp moss. Steep in boiling water for invigorating tea." },
-                    { key: "Healing Chamomile", desc: "Delicate white petals with golden centers. Calms fatigue and restores endurance." },
-                    { key: "Forest Blueberries", desc: "Plump Vaccinium berries rich in antioxidants. Eat raw for an instant stamina burst." },
-                    { key: "Golden Chanterelle", desc: "Prized apricot-scented woodland mushroom. Roast over campfire embers for a hearty meal." },
-                    { key: "Forest Deer", desc: "Graceful woodland herbivores that graze near stream. Walk slowly or sit on bench to photograph." },
-                    { key: "Red Fox", desc: "Agile ridge-dwelling hunters with russet coats and white-tipped tails." },
-                    { key: "Barn Owl", desc: "Silent nocturnal sentinels perched on old pine stumps, watching the forest floor." }
-                ];
-                entries.forEach(e => {
-                    const unlocked = state.discovered[e.key];
-                    box.innerHTML += `
-                        <div class="entry-card ${unlocked ? '' : 'locked'}">
-                            <div class="entry-title"><span>${unlocked ? e.key : '??? Undiscovered Species'}</span><span>${unlocked ? '✅ Documented' : '🔒 Unseen'}</span></div>
-                            <div class="entry-desc">${unlocked ? e.desc : 'Explore the woods, forage plants, or photograph wildlife to unlock entry.'}</div>
-                        </div>`;
-                });
-            } else if (tab === 'bounties') {
-                const bounties = [
-                    { key: "Campfire by the Water", desc: "Light a campfire near the stream bank at night and capture its warm reflection." },
-                    { key: "Starry Night Canopy", desc: "Look upward into a clear night sky and photograph the starry canopy." },
-                    { key: "Wildlife Encounter", desc: "Approach a Forest Deer, Red Fox, or Barn Owl quietly and capture a clear photograph." },
-                    { key: "Ancient Landmark", desc: "Discover the Standing Stones, Abandoned Watchtower, or Cairn Shrine and photograph it." }
-                ];
-                bounties.forEach(b => {
-                    const done = state.bountiesCompleted[b.key];
-                    box.innerHTML += `
-                        <div class="entry-card">
-                            <div class="entry-title"><span>${b.key}</span><span>${done ? '🏆 Completed' : '📷 Open Prompt'}</span></div>
-                            <div class="entry-desc">${b.desc}</div>
-                        </div>`;
-                });
-            } else if (tab === 'stars') {
-                constellationObjects.forEach(c => {
-                    box.innerHTML += `
-                        <div class="entry-card ${c.completed ? '' : 'locked'}">
-                            <div class="entry-title"><span>${c.name}</span><span>${c.completed ? '✨ Traced' : `${c.tracedCount}/${c.nodes.length} Stars`}</span></div>
-                            <div class="entry-desc">${c.desc}</div>
-                        </div>`;
-                });
-            } else if (tab === 'lore') {
-                if (state.foundPages.length === 0) {
-                    box.innerHTML = `<div class="entry-card"><div class="entry-desc">No Lost Journal Pages found yet. Explore off the main stream to find Standing Stones, Ranger Lookout, and Cairn Shrine.</div></div>`;
-                } else {
-                    state.foundPages.forEach(p => {
-                        box.innerHTML += `
-                            <div class="entry-card">
-                                <div class="entry-title"><span>${p.pageTitle}</span><span>📜 Recovered</span></div>
-                                <div class="entry-desc">"${p.pageText}"</div>
-                            </div>`;
-                    });
-                }
-            } else if (tab === 'album') {
-                if (state.photos.length === 0) {
-                    box.innerHTML = `<div class="entry-card"><div class="entry-desc">No photographs taken yet. Press [C] in the forest to snap pictures!</div></div>`;
-                } else {
-                    const grid = document.createElement('div');
-                    grid.className = 'photo-grid';
-                    state.photos.forEach(p => {
-                        grid.innerHTML += `<div class="photo-item"><img src="${p.url}" class="photo-thumb"><div class="photo-caption">${p.caption}</div></div>`;
-                    });
-                    box.appendChild(grid);
-                }
-            }
-        }
-
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => renderJournalTab(btn.dataset.tab));
-        });
         document.getElementById('btn-journal').addEventListener('click', toggleJournal);
         document.getElementById('close-journal-btn').addEventListener('click', toggleJournal);
-        document.getElementById('btn-binoculars').addEventListener('click', toggleBinoculars);
 
-        // Top controls
-        document.getElementById('btn-toggle-time').addEventListener('click', () => {
-            state.timeOfDay = state.timeOfDay >= 18 || state.timeOfDay < 6 ? 13 : 21;
-            updateTimeLighting(); playSound('ui');
-        });
-        document.getElementById('btn-toggle-weather').addEventListener('click', () => {
-            state.weatherMode = (state.weatherMode + 1) % 3;
-            updateWeatherEffects(); playSound('ui');
-        });
-        document.getElementById('btn-mute').addEventListener('click', () => {
-            state.muted = !state.muted;
-            if (masterGain) masterGain.gain.value = state.muted ? 0 : 1.0;
-            document.getElementById('btn-mute').innerText = state.muted ? "Audio: OFF" : "Audio: ON";
-            playSound('ui');
-        });
-        document.getElementById('start-btn').addEventListener('click', () => {
-            initAudio();
+        // BULLETPROOF START BUTTON BINDING
+        const startBtn = document.getElementById('start-btn');
+        const startScreen = document.getElementById('start-screen');
+
+        function launchGame(e) {
+            e.preventDefault();
+            if (state.gameStarted) return;
+            
             state.gameStarted = true;
-            document.getElementById('start-screen').style.opacity = '0';
-            setTimeout(() => { document.getElementById('start-screen').style.display = 'none'; }, 500);
-            renderer.domElement.requestPointerLock();
-        });
+            initAudio();
 
-        document.getElementById('touch-action-btn').addEventListener('click', () => handleInteraction());
-        document.getElementById('touch-zoom-btn').addEventListener('click', () => toggleBinoculars());
-        document.getElementById('touch-run-btn').addEventListener('click', () => {
-            state.isRunning = !state.isRunning;
-            document.getElementById('touch-run-btn').style.background = state.isRunning ? '#38bdf8' : 'rgba(11, 17, 29, 0.88)';
-        });
+            startScreen.style.opacity = '0';
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+            }, 400);
 
-        let notifTimeout = null;
+            try {
+                renderer.domElement.requestPointerLock();
+            } catch (err) {
+                console.log("Pointer lock pending user gesture");
+            }
+        }
+
+        startBtn.addEventListener('click', launchGame);
+        startBtn.addEventListener('touchend', launchGame);
+
         function showNotification(text) {
             const banner = document.getElementById('notification-banner');
-            banner.innerText = text; banner.classList.add('show');
-            clearTimeout(notifTimeout);
-            notifTimeout = setTimeout(() => { banner.classList.remove('show'); }, 4000);
+            banner.innerText = text;
+            banner.classList.add('show');
+            setTimeout(() => banner.classList.remove('show'), 3500);
         }
 
         function updateHUD() {
-            const hours = Math.floor(state.timeOfDay), mins = Math.floor((state.timeOfDay - hours) * 60);
-            document.getElementById('hud-time').innerText = `${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
-            document.getElementById('hud-weather').innerText = ['Clear ☀️', 'Rain 🌧️', 'Fog 🌫️'][state.weatherMode];
-            document.getElementById('btn-toggle-weather').innerText = `Weather: ${['Clear', 'Rain', 'Fog'][state.weatherMode]}`;
-            document.getElementById('btn-toggle-time').innerText = state.isNight ? "Time: Night" : "Time: Day";
             document.getElementById('hud-wood').innerText = state.woodCount;
-            document.getElementById('hud-items').innerText = `${state.foragedItems.length} / ${state.rawFishCount}`;
-            const discoveredCount = Object.values(state.discovered).filter(Boolean).length + state.foundPages.length;
-            document.getElementById('hud-journal').innerText = `${discoveredCount}/14`;
-            document.getElementById('hud-stamina').innerText = `${Math.floor(state.stamina)}%`;
-        }
-
-        function updateTimeLighting() {
-            state.isNight = state.timeOfDay < 6 || state.timeOfDay > 19;
-            const sunAngle = ((state.timeOfDay - 6) / 24) * Math.PI * 2;
-            const sunY = Math.sin(sunAngle), sunX = Math.cos(sunAngle);
-
-            sunLight.position.set(sunX * 100, Math.max(-20, sunY * 100), 40);
-            skyUniforms.sunDirection.value.copy(sunLight.position).normalize();
-            waterUniforms.uSunDir.value.copy(skyUniforms.sunDirection.value);
-
-            if (state.isNight) {
-                sunLight.intensity = 0.04; hemiLight.intensity = 0.14;
-                skyUniforms.topColor.value.setHex(0x02040a);
-                skyUniforms.horizonColor.value.setHex(0x09111e);
-                skyUniforms.nightFactor.value = 1.0; waterUniforms.uNightFactor.value = 1.0;
-                scene.fog.color.setHex(0x060b14);
-                starsGroup.material.opacity = (state.weatherMode === 0) ? 0.95 : 0.2;
-                constellationsGroup.visible = (state.weatherMode === 0);
-                if (firefliesPoints) firefliesPoints.material.opacity = 0.85;
-            } else if (state.timeOfDay < 8 || state.timeOfDay > 17) {
-                sunLight.intensity = 0.85; sunLight.color.setHex(0xffb36b); hemiLight.intensity = 0.4;
-                skyUniforms.topColor.value.setHex(0x283c63);
-                skyUniforms.horizonColor.value.setHex(0xf99b66);
-                skyUniforms.sunColor.value.setHex(0xffc978);
-                skyUniforms.nightFactor.value = 0.25; waterUniforms.uNightFactor.value = 0.25;
-                scene.fog.color.setHex(0xd98a6c);
-                starsGroup.material.opacity = 0.15; constellationsGroup.visible = false;
-                if (firefliesPoints) firefliesPoints.material.opacity = 0.35;
-            } else {
-                sunLight.intensity = 1.35; sunLight.color.setHex(0xfff5e0); hemiLight.intensity = 0.6;
-                const isFoggy = state.weatherMode === 2;
-                skyUniforms.topColor.value.setHex(isFoggy ? 0x64748b : 0x1d63b8);
-                skyUniforms.horizonColor.value.setHex(isFoggy ? 0x94a3b8 : 0xa6d5fa);
-                skyUniforms.sunColor.value.setHex(0xfff6dd);
-                skyUniforms.nightFactor.value = 0.0; waterUniforms.uNightFactor.value = 0.0;
-                scene.fog.color.setHex(isFoggy ? 0x8fa1b5 : 0x9ac9f0);
-                starsGroup.material.opacity = 0; constellationsGroup.visible = false;
-                if (firefliesPoints) firefliesPoints.material.opacity = 0;
-            }
-        }
-
-        function updateWeatherEffects() {
-            if (state.weatherMode === 1) { rainSystem.visible = true; scene.fog.density = 0.022; }
-            else if (state.weatherMode === 2) { rainSystem.visible = false; scene.fog.density = 0.052; }
-            else { rainSystem.visible = false; scene.fog.density = 0.011; }
-            updateTimeLighting(); updateHUD();
+            document.getElementById('hud-journal').innerText = `${state.foundPages.length}/14`;
         }
 
         // =========================================================================
-        // MINIMAP
-        // =========================================================================
-        const minimapCanvas = document.getElementById('minimap-canvas'), minimapCtx = minimapCanvas.getContext('2d');
-        function drawMinimap() {
-            minimapCtx.clearRect(0, 0, 124, 124);
-            minimapCtx.fillStyle = 'rgba(11, 17, 29, 0.92)';
-            minimapCtx.fillRect(0, 0, 124, 124);
-
-            const scale = 1.1, cx = 62, cy = 62;
-            const streamScreenX = cx + (0 - player.x) * scale;
-            minimapCtx.fillStyle = '#38bdf8';
-            minimapCtx.fillRect(streamScreenX - (5 * scale), 0, 10 * scale, 124);
-
-            landmarks.forEach(lm => {
-                const lx = (lm.x - player.x) * scale + cx, lz = (lm.z - player.z) * scale + cy;
-                minimapCtx.fillStyle = '#fbbf24'; minimapCtx.fillRect(lx - 2.5, lz - 2.5, 5, 5);
-            });
-            wildlifeEntities.forEach(w => {
-                const wx = (w.x - player.x) * scale + cx, wz = (w.z - player.z) * scale + cy;
-                minimapCtx.fillStyle = '#34d399'; minimapCtx.beginPath(); minimapCtx.arc(wx, wz, 2.5, 0, Math.PI * 2); minimapCtx.fill();
-            });
-            if (state.fireBuilt && campfireMesh) {
-                const dx = (campfireMesh.position.x - player.x) * scale + cx, dz = (campfireMesh.position.z - player.z) * scale + cy;
-                minimapCtx.fillStyle = '#f97316'; minimapCtx.beginPath(); minimapCtx.arc(dx, dz, 3.5, 0, Math.PI * 2); minimapCtx.fill();
-            }
-            minimapCtx.fillStyle = '#f43f5e'; minimapCtx.beginPath(); minimapCtx.arc(cx, cy, 4, 0, Math.PI * 2); minimapCtx.fill();
-        }
-
-        // =========================================================================
-        // ANIMATION & SIMULATION LOOP
+        // MAIN LOOP
         // =========================================================================
         const clock = new THREE.Clock();
 
@@ -1744,92 +697,33 @@
             const elapsed = clock.getElapsedTime();
 
             waterUniforms.uTime.value = elapsed;
-            for (let i = 0; i < windShaderUniforms.length; i++) windShaderUniforms[i].value = elapsed;
-
-            if (state.fireLit && campfireLight) {
-                campfireLight.intensity = 3.0 + Math.sin(elapsed * 14.0) * 0.4 + Math.cos(elapsed * 23.0) * 0.25;
-                const flame = campfireMesh.getObjectByName('flame');
-                if (flame) {
-                    flame.scale.y = 0.92 + Math.sin(elapsed * 18.0) * 0.15;
-                    flame.scale.x = 0.95 + Math.cos(elapsed * 15.0) * 0.1;
-                }
-            }
-
-            if (state.activity) {
-                state.activity.progress += state.activity.dir * 68 * dt;
-                if (state.activity.progress >= 100) { state.activity.progress = 100; state.activity.dir = -1; }
-                else if (state.activity.progress <= 0) { state.activity.progress = 0; state.activity.dir = 1; }
-                document.getElementById('activity-fill').style.width = `${state.activity.progress}%`;
-            }
-
-            wildlifeEntities.forEach(w => {
-                if (w.stationary) {
-                    w.mesh.rotation.y = Math.atan2(player.x - w.x, player.z - w.z);
-                    return;
-                }
-                const distToPlayer = Math.hypot(player.x - w.x, player.z - w.z);
-                const playerIsLoud = (keys.shift || state.isRunning) && (keys.w || keys.a || keys.s || keys.d);
-                if (distToPlayer < (playerIsLoud ? 18 : 6.5) && !state.sittingBench) {
-                    w.dir = Math.atan2(w.x - player.x, w.z - player.z);
-                    w.fleeing = true; w.stateTimer = 2.0;
-                } else {
-                    w.fleeing = false; w.stateTimer -= dt;
-                    if (w.stateTimer <= 0) { w.stateTimer = 2.5 + Math.random() * 4.5; w.dir += (Math.random() - 0.5) * 2.2; }
-                }
-                const spd = w.fleeing ? 4.8 : 1.1;
-                const nx = w.x + Math.sin(w.dir) * spd * dt, nz = w.z + Math.cos(w.dir) * spd * dt;
-                if (Math.abs(nx) > 6.5 && Math.abs(nx) < 120 && Math.abs(nz) < 120) { w.x = nx; w.z = nz; }
-                else { w.dir += Math.PI * 0.7; }
-                w.mesh.position.set(w.x, getTerrainHeight(w.x, w.z), w.z);
-                w.mesh.rotation.y = w.dir;
-            });
-
-            if (firefliesPoints && firefliesPoints.material.opacity > 0) {
-                const ffArr = firefliesPoints.geometry.attributes.position.array;
-                for (let i = 0; i < ffArr.length; i += 3) ffArr[i + 1] = 1.2 + Math.sin(elapsed * 1.8 + i) * 0.6;
-                firefliesPoints.geometry.attributes.position.needsUpdate = true;
-            }
 
             if (state.gameStarted && !state.inTent) {
-                updateSpatialAudio(elapsed);
+                updateSpatialAudio();
 
-                state.timeOfDay += state.timeSpeed * (dt / 60);
-                if (state.timeOfDay >= 24) state.timeOfDay = 0;
-                updateTimeLighting();
-
-                let moveSpeed = player.speed;
-                if ((keys.shift || state.isRunning) && state.stamina > 5) {
-                    moveSpeed *= player.runMultiplier;
-                    state.stamina = Math.max(0, state.stamina - 24 * dt);
-                } else { state.stamina = Math.min(100, state.stamina + 16 * dt); }
-
+                let moveSpeed = player.speed * (keys.shift ? player.runMultiplier : 1.0);
                 let moveX = 0, moveZ = 0;
-                if (!state.sittingBench && !state.activity) {
-                    if (keys.w) moveZ -= 1;
-                    if (keys.s) moveZ += 1;
-                    if (keys.a) moveX -= 1;
-                    if (keys.d) moveX += 1;
-                }
+                if (keys.w) moveZ -= 1;
+                if (keys.s) moveZ += 1;
+                if (keys.a) moveX -= 1;
+                if (keys.d) moveX += 1;
 
                 if (moveX !== 0 || moveZ !== 0) {
                     const len = Math.hypot(moveX, moveZ);
                     moveX /= len; moveZ /= len;
-                    const forwardX = Math.sin(player.rotY), forwardZ = Math.cos(player.rotY);
-                    const rightX = Math.sin(player.rotY + Math.PI / 2), rightZ = Math.cos(player.rotY + Math.PI / 2);
-                    const nx = player.x + (forwardX * -moveZ + rightX * moveX) * moveSpeed * dt;
-                    const nz = player.z + (forwardZ * -moveZ + rightZ * moveX) * moveSpeed * dt;
-                    if (Math.abs(nx) < 140 && Math.abs(nz) < 140) { player.x = nx; player.z = nz; }
+                    const fX = Math.sin(player.rotY), fZ = Math.cos(player.rotY);
+                    const rX = Math.sin(player.rotY + Math.PI / 2), rZ = Math.cos(player.rotY + Math.PI / 2);
+                    player.x += (fX * -moveZ + rX * moveX) * moveSpeed * dt;
+                    player.z += (fZ * -moveZ + rZ * moveX) * moveSpeed * dt;
 
-                    const stepInterval = (keys.shift || state.isRunning) ? 0.34 : 0.54;
-                    if (elapsed - lastStepTime > stepInterval) { lastStepTime = elapsed; playFootstep(); }
+                    if (elapsed - lastStepTime > 0.45) {
+                        lastStepTime = elapsed;
+                        playFootstep();
+                    }
                 }
 
                 const groundElevation = getTerrainHeight(player.x, player.z);
-                const eyeOffset = state.sittingBench ? 1.15 : 1.72;
-                const bobbing = (moveX !== 0 || moveZ !== 0) ? Math.sin(elapsed * (keys.shift ? 13 : 8)) * 0.05 : 0;
-
-                camera.position.x = player.x; camera.position.z = player.z;
-                camera.position.y = THREE.MathUtils.lerp(camera.position.y, groundElevation + eyeOffset + bobbing, 0.25);
+                camera.position.set(player.x, groundElevation + 1.7, player.z);
                 skyDome.position.set(player.x, 0, player.z);
 
                 const targetLook = new THREE.Vector3(
@@ -1838,73 +732,12 @@
                     player.z + Math.cos(player.rotY) * 10
                 );
                 camera.lookAt(targetLook);
-
-                if (rainSystem.visible) {
-                    rainSystem.position.set(player.x, 0, player.z);
-                    const positions = rainGeo.attributes.position.array;
-                    for (let i = 1; i < positions.length; i += 3) {
-                        positions[i] -= 38 * dt;
-                        if (positions[i] < 0) positions[i] = 60;
-                    }
-                    rainGeo.attributes.position.needsUpdate = true;
-                }
-
-                // Interaction Prompts
-                let promptText = "";
-                if (state.isNight && state.weatherMode === 0) {
-                    const raycaster = new THREE.Raycaster();
-                    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-                    const starNodes = constellationsGroup.children.filter(c => c.type === 'Mesh');
-                    const intersects = raycaster.intersectObjects(starNodes);
-                    if (intersects.length > 0) {
-                        const cObj = intersects[0].object.userData.constellation;
-                        promptText = `Press [E] to Trace Star in ${cObj.name}`;
-                    }
-                }
-                if (!promptText) {
-                    for (let item of interactables) {
-                        if (item.active && Math.hypot(player.x - item.x, player.z - item.z) < 2.7) {
-                            if (item.type === 'wood') promptText = "Press [E] to Gather Wood";
-                            else if (item.type === 'forage') promptText = `Press [E] to Forage ${item.itemData.name}`;
-                            else if (item.type === 'page') promptText = `Press [E] to Collect ${item.pageData.pageTitle}`;
-                            break;
-                        }
-                    }
-                }
-                if (!promptText) {
-                    for (let s of state.structures) {
-                        if (Math.hypot(player.x - s.mesh.position.x, player.z - s.mesh.position.z) < 2.8) {
-                            promptText = s.type === 'bench' ? "Press [E] to Sit & Contemplate  |  [X] Dismantle" : "Press [X] to Dismantle Lantern";
-                            break;
-                        }
-                    }
-                }
-                if (!promptText && Math.abs(player.x) < 6.5 && Math.abs(player.z) < 150) { promptText = "Press [E] to Collect Stream Water"; }
-                if (!promptText && tentMesh && Math.hypot(player.x - tentMesh.position.x, player.z - tentMesh.position.z) < 3.0) { promptText = "Press [E] to Sleep in Tent"; }
-                if (!promptText && campfireMesh && Math.hypot(player.x - campfireMesh.position.x, player.z - campfireMesh.position.z) < 3.0) {
-                    promptText = state.fireLit ? "Press [E] to Stoke Campfire" : "Press [E] to Light Campfire";
-                }
-
-                const promptEl = document.getElementById('interaction-prompt');
-                if (promptText && !state.sittingBench) {
-                    promptEl.innerText = promptText; promptEl.classList.add('visible');
-                } else { promptEl.classList.remove('visible'); }
-
-                drawMinimap();
-                updateHUD();
             }
 
-            if (composer) composer.render(); else renderer.render(scene, camera);
+            if (composer) composer.render();
+            else renderer.render(scene, camera);
         }
 
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            if (composer) composer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        updateTimeLighting();
         animate();
     </script>
 </body>
